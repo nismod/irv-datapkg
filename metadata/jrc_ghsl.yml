@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: jrc_ghsl
+description: JRC Global Human Settlement Layers
+version: R2023A
+dataset_name: jrc_ghsl
+data_author: Joint Research Centre
+data_title: GHSL
+data_title_long: Extract from Global Human Settlement Layers
+data_summary: >
+  The spatial raster dataset depicts the distribution of residential population,
+  expressed as the number of people per cell. Residential population estimates
+  between 1975 and 2020 in 5-year intervals and projections to 2025 and 2030
+  derived from CIESIN GPWv4.11 were disaggregated from census or administrative
+  units to grid cells, informed by the distribution, density, and classification
+  of built-up as mapped in the Global Human Settlement Layer (GHSL) global layer
+  per corresponding epoch.
+
+  The complete information about the GHSL main products can be found in the GHSL
+  Data Package 2022 report (10.33 MB):
+  https://ghsl.jrc.ec.europa.eu/documents/GHSL_Data_Package_2022.pdf
+
+data_citation: >
+  Dataset:
+
+  Schiavina M., Freire S., MacManus K. (2022): GHS-POP R2022A - GHS population
+  grid multitemporal (1975-2030).European Commission, Joint Research Centre (JRC)
+  PID: http://data.europa.eu/89h/d6d86a90-4351-4508-99c1-cb074b022c4a,
+  doi:10.2905/D6D86A90-4351-4508-99C1-CB074B022C4A
+
+  Concept & Methodology:
+
+  Freire S., MacManus K., Pesaresi M., Doxsey-Whitfield E., Mills J. (2016)
+  Development of new open and free multi-temporal global population grids at 250 m
+  resolution. Geospatial Data in a Changing World; Association of Geographic
+  Information Laboratories in Europe (AGILE), AGILE 2016
+
+data_license:
+  name: CC-BY-4.0
+  title: Creative Commons Attribution 4.0
+  path: https://creativecommons.org/licenses/by/4.0/
+
+data_origin_url: https://ghsl.jrc.ec.europa.eu/
+data_formats: ["GeoTIFF"]

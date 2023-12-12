@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: osm_road_and_rail
+description: OpenStreetMap Road and Rail networks
+version: "20231106"
+dataset_name: gri_osm_road_and_rail
+data_author: nismod/datapkg contributors and OpenStreetMap contributors
+data_title: OSM Road and Rail
+data_title_long: Road and Rail networks derived from OpenStreetMap
+data_summary: >
+  OpenStreetMap provides map data, including on road and railway networks.
+  This dataset is a lightly processed extract from the global OpenStreetMap
+  database, produced by researchers at the University of Oxford to support
+  infrastructure systems analysis and climate risk and resilience assessments.
+
+  OpenStreetMap is open data, licensed under the Open Data Commons Open Database
+  License (ODbL) by the OpenStreetMap Foundation (OSMF).
+  https://www.openstreetmap.org/copyright
+
+  The data is produced from a snapshot of OpenStreetMap by a reproducible
+  pipeline which is under development and made freely available at
+  https://github.com/nismod/datapkg.
+
+data_citation: >
+  Russell T., Thomas F., nismod/datapkg contributors and OpenStreetMap
+  contributors (2023) Road and Rail networks derived from OpenStreetMap.
+  [Dataset] Available at https://global.infrastructureresilience.org
+
+data_license:
+  name: ODbL-1.0
+  title: Open Data Commons Open Database License 1.0
+  path: https://opendefinition.org/licenses/odc-odbl
+
+data_origin_url: https://global.infrastructureresilience.org
+data_formats: ["GeoPackage"]

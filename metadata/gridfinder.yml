@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: gridfinder
+description: gridfinder - Predictive mapping of the global power system using open data
+version: 1.1.1
+dataset_name: gridfinder
+data_author: Arderne, C., Nicolas, C., Zorn, C., Koks, E. E.
+data_title: Gridfinder
+data_title_long: Gridfinder data from 'Predictive mapping of the global power system using open data'
+data_summary: >
+  Three primary global data outputs from the research:
+
+  grid.gpkg: Vectorized predicted distribution and transmission line network,
+  with existing OpenStreetMap lines tagged in the 'source' column
+
+  targets.tif: Binary raster showing locations predicted to be connected to
+  distribution grid.
+
+  lv.tif: Raster of predicted low-voltage infrastructure in kilometres per cell.
+
+  This data was created with code in the following three repositories:
+
+  https://github.com/carderne/gridfinder
+  https://github.com/carderne/predictive-mapping-global-power
+  https://github.com/carderne/access-estimator
+
+  Full steps to reproduce are contained in this file:
+
+  https://github.com/carderne/predictive-mapping-global-power/blob/master/README.md
+
+  The data can be visualized at the following location:
+
+  https://gridfinder.org
+
+data_citation: >
+  Arderne, Christopher, Nicolas, Claire, Zorn, Conrad, & Koks, Elco E. (2020).
+  Data from: Predictive mapping of the global power system using open data [Data
+  set]. In Nature Scientific Data (1.1.1, Vol. 7, Number Article 19). Zenodo.
+  https://doi.org/10.5281/zenodo.3628142
+
+data_license:
+  name: CC-BY-4.0
+  title: Creative Commons Attribution 4.0
+  path: https://creativecommons.org/licenses/by/4.0/
+
+data_origin_url: https://doi.org/10.5281/zenodo.3628142
+data_formats: ["GeoPackage", "GeoTIFF"]

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "irv-datapkg-schema.json",
+  "title": "Data Resource Metadata",
+  "description": "Metadata for irv-datapkg resources",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "dataset_name": {
+      "type": "string"
+    },
+    "data_author": {
+      "type": "string"
+    },
+    "data_title": {
+      "type": "string"
+    },
+    "data_title_long": {
+      "type": "string"
+    },
+    "data_summary": {
+      "type": "string"
+    },
+    "data_citation": {
+      "type": "string"
+    },
+    "data_license": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": ["name", "title", "path"]
+    },
+    "data_origin_url": {
+      "type": "string"
+    },
+    "data_formats": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "version",
+    "dataset_name",
+    "data_author",
+    "data_title",
+    "data_title_long",
+    "data_summary",
+    "data_citation",
+    "data_license",
+    "data_origin_url",
+    "data_formats"
+  ]
+}

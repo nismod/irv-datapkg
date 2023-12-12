@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: wri_powerplants
+description: World Resources Institute Global Power Plant Database
+version: v1.3.0
+dataset_name: wri_powerplants
+data_author: World Resources Institute
+data_title: WRI Global Power Plant Database
+data_title_long: World Resources Institute Global Power Plant Database
+data_summary: >
+  The Global Power Plant Database is a comprehensive, open source database of power plants around the world. It
+  centralizes power plant data to make it easier to navigate, compare and draw insights for one’s own analysis.
+  The database covers approximately 35,000 power plants from 167 countries and includes thermal plants (e.g. coal,
+  gas, oil, nuclear, biomass, waste, geothermal) and renewables (e.g. hydro, wind, solar). Each power plant is
+  geolocated and entries contain information on plant capacity, generation, ownership, and fuel type.
+
+data_citation: >
+  Global Energy Observatory, Google, KTH Royal Institute of Technology in Stockholm, Enipedia, World Resources
+  Institute. 2018. Global Power Plant Database. Published on Resource Watch and Google Earth Engine;
+  http://resourcewatch.org/ https://earthengine.google.com/
+
+data_license:
+  name: CC-BY-4.0
+  title: Creative Commons Attribution 4.0
+  path: https://creativecommons.org/licenses/by/4.0/
+
+data_origin_url: https://datasets.wri.org/dataset/globalpowerplantdatabase
+data_formats: ["GeoPackage"]

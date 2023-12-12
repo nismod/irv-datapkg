@@ -1,0 +1,17 @@
+name: datapkg
+channels:
+  - bioconda # for snakemake
+  - conda-forge # for most other packages
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - zenodo_get>=1.5.1
+  - black # Python formatting
+  - gdal>=3.3 # command-line tools for spatial data
+  - geopandas>=0.14.0 # geospatial dataframes
+  - osmium-tool==1.14.0 # openstreetmap extracts
+  - pyyaml # read YAML files
+  - snakemake==7.32.4 # workflow management
+  - snakefmt # Snakefile formatting
