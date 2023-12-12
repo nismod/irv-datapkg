@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=irv-datapkg-schema.json
 name: osm_road_and_rail
 description: OpenStreetMap Road and Rail networks
-version: "20231106"
+version: "231106"
 dataset_name: gri_osm_road_and_rail
 data_author: nismod/datapkg contributors and OpenStreetMap contributors
 data_title: OSM Road and Rail
