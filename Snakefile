@@ -21,30 +21,35 @@ rule datapackage:
 #
 # WRI Aqueduct Flood Hazard
 #
+AQUEDUCT_RPS = (2, 5, 10, 25, 50, 100, 250, 500, 1000)
+AQUEDUCT_YEARS = [2030, 2050, 2080]
+AQUEDUCT_GCMS = (
+    "NorESM1-M",
+    "GFDL_ESM2M",
+    "HadGEM2-ES",
+    "IPSL-CM5A-LR",
+    "MIROC-ESM-CHEM",
+)
+
+
 rule download_aqueduct_coastal_all:
     # SUBSIDENCE default to with-subsidence, wtsub
-    # SLR default to 95th percentile sea-level rise
+    # SLR default to 95th percentile sea-level rise, "0"
     input:
         tiffs=expand(
             "incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
             RCP=["historical"],
             SUBSIDENCE=["wtsub"],
             YEAR=["hist"],
-            RP=[
-            f"rp{str(rp).zfill(4)}"
-                for rp in (2, 5, 10, 25, 50, 100, 250, 500, 1000)
-            ],
+            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
             SLR=["0"],
         )
         + expand(
             "incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
             RCP=["rcp4p5", "rcp8p5"],
             SUBSIDENCE=["wtsub"],
-            YEAR=[2030, 2050, 2080],
-            RP=[
-            f"rp{str(rp).zfill(4)}"
-                for rp in (2, 5, 10, 25, 50, 100, 250, 500, 1000)
-            ],
+            YEAR=AQUEDUCT_YEARS,
+            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
             SLR=["0"],
         ),
 
@@ -54,8 +59,8 @@ rule download_aqueduct_coastal:
         tiff="incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
     shell:
         """
-        mkdir -p ./incoming_data/aqueduct
-        wget -nc -P ./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inuncoast_{wildcards.RCP}_{wildcards.SUBSIDENCE}_{wildcards.YEAR}_{wildcards.RP}_{wildcards.SLR}.tif
+        mkdir --parents ./incoming_data/aqueduct
+        wget --no-clobber --directory-prefix=./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inuncoast_{wildcards.RCP}_{wildcards.SUBSIDENCE}_{wildcards.YEAR}_{wildcards.RP}_{wildcards.SLR}.tif
         """
 
 
@@ -66,29 +71,14 @@ rule download_aqueduct_river_all:
             RCP=["historical"],
             GCM=["WATCH".zfill(14)],
             YEAR=["hist"],
-            RP=[
-            f"rp{str(rp).zfill(4)}"
-                for rp in (2, 5, 10, 25, 50, 100, 250, 500, 1000)
-            ],
+            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
         )
         + expand(
             "incoming_data/aqueduct/inunriver_{RCP}_{GCM}_{YEAR}_{RP}.tif",
             RCP=["rcp4p5", "rcp8p5"],
-            GCM=[
-                gcm.zfill(14)
-                for gcm in (
-                    "NorESM1-M",
-                    "GFDL_ESM2M",
-                    "HadGEM2-ES",
-                    "IPSL-CM5A-LR",
-                    "MIROC-ESM-CHEM",
-                )
-            ],
-            YEAR=[2030, 2050, 2080],
-            RP=[
-            f"rp{str(rp).zfill(4)}"
-                for rp in (2, 5, 10, 25, 50, 100, 250, 500, 1000)
-            ],
+            GCM=[gcm.zfill(14) for gcm in AQUEDUCT_GCMS],
+            YEAR=AQUEDUCT_YEARS,
+            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
         ),
 
 
@@ -97,8 +87,8 @@ rule download_aqueduct_river:
         tiff="incoming_data/aqueduct/inunriver_{RCP}_{GCM}_{YEAR}_{RP}.tif",
     shell:
         """
-        mkdir -p ./incoming_data/aqueduct
-        wget -nc -P ./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inunriver_{wildcards.RCP}_{wildcards.GCM}_{wildcards.YEAR}_{wildcards.RP}.tif
+        mkdir --parents ./incoming_data/aqueduct
+        wget --no-clobber --directory-prefix=./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inunriver_{wildcards.RCP}_{wildcards.GCM}_{wildcards.YEAR}_{wildcards.RP}.tif
         """
 
 
@@ -111,7 +101,7 @@ rule download_gridfinder:
         targets="incoming_data/gridfinder/targets.tif",
     shell:
         """
-        mkdir -p incoming_data/gridfinder
+        mkdir --parents incoming_data/gridfinder
         cd incoming_data/gridfinder
         zenodo_get 10.5281/zenodo.3628142
         """
@@ -196,7 +186,7 @@ rule download_isimip:
         ),
     shell:
         """
-        mkdir -p incoming_data/isimip
+        mkdir --parents incoming_data/isimip
         cd incoming_data/isimip
         zenodo_get 10.5281/zenodo.7732393
         """
@@ -221,8 +211,8 @@ rule download_population:
         tiff="incoming_data/ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
     shell:
         """
-        mkdir -p ./incoming_data/ghsl
-        wget -nc -P ./incoming_data/ghsl \
+        mkdir --parents ./incoming_data/ghsl
+        wget --no-clobber --directory-prefix=./incoming_data/ghsl \
         https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
         unzip {input} -d ./incoming_data/ghsl
         """
@@ -236,10 +226,10 @@ rule download_osm:
         pbf="incoming_data/osm/planet-231106.osm.pbf",
     shell:
         """
-        mkdir -p incoming_data/osm
+        mkdir --parents incoming_data/osm
         aws s3 cp --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/planet-231106.osm.pbf ./incoming_data/osm/
         aws s3 cp --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/planet-231106.osm.pbf.md5 ./incoming_data/osm/
-        md5sum -c ./incoming_data/osm/planet-231106.osm.pbf
+        md5sum --check ./incoming_data/osm/planet-231106.osm.pbf.md5
         """
 
 
@@ -265,7 +255,7 @@ rule download_storm:
         ),
     shell:
         """
-        mkdir -p incoming_data/storm
+        mkdir --parents incoming_data/storm
         cd incoming_data/storm
         zenodo_get 10.5281/zenodo.7438145
         """
@@ -279,7 +269,7 @@ rule download_powerplants:
         csv="input/powerplants/global_power_plant_database.csv",
     shell:
         """
-        mkdir -p incoming_data/powerplants
+        mkdir --parents incoming_data/powerplants
         cd incoming_data/powerplants
         wget https://wri-dataportal-prod.s3.amazonaws.com/manual/global_power_plant_database_v_1_3.zip
         unzip -o global_power_plant_database_v_1_3.zip
