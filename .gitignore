@@ -1,3 +1,11 @@
+# Snakemake
 .snakemake
+
+# Data
 data
 incoming_data
+
+# Python
+__pycache__
+*.py[c,i]
+*.egg-info

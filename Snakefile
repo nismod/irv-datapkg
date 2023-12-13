@@ -1,15 +1,13 @@
-import pandas
-import geopandas
+from pathlib import Path
 
-
-def read_boundaries():
-    return geopandas.read_file("bundled_data/ne_10m_admin_0_map_units_custom.gpkg")
-
+import irv_datapkg
 
 rule all:
     input:
-        expand("data/{ISO3}/datapackage.json", ISO3=read_boundaries().CODE_A3),
+        expand("data/{ISO3}/datapackage.json", ISO3=irv_datapkg.read_boundaries(Path(".")).CODE_A3),
 
+rule clean:
+    shell: "rm -rf data"
 
 rule datapackage:
     output:

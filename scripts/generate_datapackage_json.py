@@ -6,11 +6,7 @@ from pathlib import Path
 import geopandas
 import yaml
 
-
-def read_boundaries(base_path: Path) -> geopandas.GeoDataFrame:
-    return geopandas.read_file(
-        base_path / "bundled_data" / "ne_10m_admin_0_map_units_custom.gpkg"
-    )
+import irv_datapkg
 
 
 def package(iso3: str, package_title: str, metadata: list[dict]) -> dict:
@@ -85,7 +81,7 @@ if __name__ == "__main__":
         base_path: Path = Path(__file__).parent.parent
         out_fname: Path = base_path / "data" / iso3 / "datapackage.json"
 
-    boundaries: geopandas.GeoDataFrame = read_boundaries(base_path)
+    boundaries: geopandas.GeoDataFrame = irv_datapkg.read_boundaries(base_path)
 
     codes: set[str] = set(boundaries.CODE_A3)
     assert iso3 in codes, f"CODE_A3 {iso3} not found in boundaries"

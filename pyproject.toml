@@ -1,0 +1,19 @@
+[project]
+name = "irv-datapkg"
+version = "0.0.1"
+authors = [
+    { name = "Tom Russell", email = "tom.russell@ouce.ox.ac.uk" },
+    { name = "Fred Thomas", email = "fred.thomas@eci.ox.ac.uk" }
+]
+description = "Helper package for irv-datapkg workflow"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/nismod/irv-datapkg"
+"Bug Tracker" = "https://github.com/nismod/irv-datapkg/issues"
