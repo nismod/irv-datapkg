@@ -187,7 +187,6 @@ rule summarise_isimip:
     output:
         csv="data/{ISO3}/isimip_heat_drought.csv",
     run:
-
         paths = glob(f"data/{wildcards.ISO3}/isimip_heat_drought/*.tif")
         summary = pandas.DataFrame({"path": paths})
         # lange2020_hwmid-humidex_gfdl-esm2m_ewembi_rcp26_nosoc_co2_leh_global_annual_2006_2099_2030_occurrence.tif
@@ -313,7 +312,7 @@ def summarise_storm_input(wildcards):
     original_storm_tiffs = rules.download_storm.output.tiffs
 
     # should match ISO3 to "JAM" or whichever country code is requested in summary
-    # and return a full list of file paths under "data/JAM/aqueduct_flood/*.tif"
+    # and return a full list of file paths under "data/JAM/storm/*.tif"
     iso3 = wildcards.ISO3
     clipped_tiffs = []
     for fname in original_storm_tiffs:
@@ -324,11 +323,39 @@ def summarise_storm_input(wildcards):
 
 rule summarise_storm:
     input:
-        tiffs=rules.download_storm.output.tiffs,
+        tiffs=summarise_storm_input,
     output:
         csv="data/{ISO3}/storm.csv",
     run:
-        raise NotImplementedError()
+        paths = glob(f"data/{wildcards.ISO3}/storm/*.tif")
+        summary = pandas.DataFrame({"path": paths})
+        # STORM_FIXED_RETURN_PERIODS_{STORM_MODEL}_{STORM_RP}_YR_RP.tif
+        meta = summary.path.str.extract(
+            r"STORM_FIXED_RETURN_PERIODS_(?P<gcm>[^_]+)_(?P<rp>[^_]+)_YR_RP"
+        )
+
+        def map_gcm_to_rcp(gcm):
+            if gcm == "constant":
+                return "historical"
+            else:
+                return "8.5"
+
+        def map_gcm_to_epoch(gcm):
+            if gcm == "constant":
+                return "2010"
+            else:
+                return "2050"
+
+        meta["hazard"] = "cyclone"
+        meta["rcp"] = meta.gcm.apply(map_gcm_to_rcp)
+        meta["epoch"] = meta.gcm.apply(map_gcm_to_epoch)
+        meta["path"] = summary.path
+
+
+        columns = ["hazard", "epoch", "rcp", "gcm", "path"]
+        meta = meta[columns].sort_values(by=columns)
+
+        meta.to_csv(output.csv, index=False)
 
 
 #
