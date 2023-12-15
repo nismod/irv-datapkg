@@ -1,92 +1,106 @@
 from pathlib import Path
 
+import geopandas
 import irv_datapkg
+import pandas
+
+# import spatialpandas
+
+BOUNDARIES = irv_datapkg.read_boundaries(Path("."))
+BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
+
+
+def boundary_geom(iso3):
+    return BOUNDARY_LU.loc[iso3, "geometry"]
+
 
 rule all:
     input:
-        expand("data/{ISO3}/datapackage.json", ISO3=irv_datapkg.read_boundaries(Path(".")).CODE_A3),
+        expand("data/{ISO3}/datapackage.json", ISO3=BOUNDARIES.CODE_A3),
+
 
 rule clean:
-    shell: "rm -rf data"
+    shell:
+        "rm -rf data"
+
 
 rule datapackage:
+    # required input must entail all the datapackage files
+    input:
+        "data/{ISO3}/aqueduct_flood.csv",
+        "data/{ISO3}/gridfinder/grid__{ISO3}.gpkg",
+        "data/{ISO3}/gridfinder/targes__{ISO3}.tif",
+        "data/{ISO3}/isimip_heat_drought.csv",
+        "data/{ISO3}/jrc_ghsl.csv",
+        "data/{ISO3}/osm_road_and_rail/osm-road-and-rail__{ISO3}.gpkg",
+        "data/{ISO3}/storm.csv",
+        "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
     output:
         json="data/{ISO3}/datapackage.json",
     script:
         "scripts/generate_datapackage_json.py"
 
 
+rule clip_tiff:
+    input:
+        tiff="incoming_data/{DATASET}/{SLUG}.tif",
+    output:
+        tiff="data/{ISO3}/{DATASET}/{SLUG}__{ISO3}.tif",
+    run:
+        irv_datapkg.crop_raster(input.tiff, output.tiff, boundary_geom(wildcards.ISO3))
+
+
+rule clip_geopackage:
+    input:
+        gpkg="incoming_data/{DATASET}/{SLUG}.gpkg",
+    output:
+        gpkg="data/{ISO3}/{DATASET}/{SLUG}__{ISO3}.gpkg",
+    run:
+        gdf = geopandas.read_file(input.gpkg, engine="pyogrio")
+        geom = boundary_geom(wildcards.ISO3)
+        (xmin, ymin, xmax, ymax) = geom.bounds
+        clipped = gdf.cx[xmin:xmax, ymin:ymax]
+        clipped.to_file(
+            output.gpkg, driver="GPKG", layer=wildcards.SLUG, engine="pyogrio"
+        )
+
+
 #
 # WRI Aqueduct Flood Hazard
 #
-AQUEDUCT_RPS = (2, 5, 10, 25, 50, 100, 250, 500, 1000)
-AQUEDUCT_YEARS = [2030, 2050, 2080]
-AQUEDUCT_GCMS = (
-    "NorESM1-M",
-    "GFDL_ESM2M",
-    "HadGEM2-ES",
-    "IPSL-CM5A-LR",
-    "MIROC-ESM-CHEM",
-)
+def summarise_aqueduct_input(wildcards):
+    # should be the directory "incoming_data/aqueduct_flood"
+    checkpoint_output = checkpoints.download_aqueduct.get(**wildcards).output.tiffs
+
+    # should be a list of filename slugs (stripped of .tif extension)
+    slugs = glob_wildcards(os.path.join(checkpoint_output, "{SLUG}.tif")).SLUG
+
+    # should match ISO3 to "JAM" or whichever country code is requested in summary
+    # and return a full list of file paths under "data/JAM/aqueduct_flood/*.tif"
+    return expand(
+        "data/{ISO3}/aqueduct_flood/{SLUG}__{ISO3}.tif", ISO3=wildcards.ISO3, SLUG=slugs
+    )
 
 
-rule download_aqueduct_coastal_all:
-    # SUBSIDENCE default to with-subsidence, wtsub
-    # SLR default to 95th percentile sea-level rise, "0"
+rule summarise_aqueduct:
     input:
-        tiffs=expand(
-            "incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
-            RCP=["historical"],
-            SUBSIDENCE=["wtsub"],
-            YEAR=["hist"],
-            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
-            SLR=["0"],
-        )
-        + expand(
-            "incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
-            RCP=["rcp4p5", "rcp8p5"],
-            SUBSIDENCE=["wtsub"],
-            YEAR=AQUEDUCT_YEARS,
-            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
-            SLR=["0"],
-        ),
-
-
-rule download_aqueduct_coastal:
+        summarise_aqueduct_input,
     output:
-        tiff="incoming_data/aqueduct/inuncoast_{RCP}_{SUBSIDENCE}_{YEAR}_{RP}_{SLR}.tif",
+        "data/{ISO3}/aqueduct_flood.csv",
+    run:
+        raise NotImplementedError()
+
+
+checkpoint download_aqueduct:
+    output:
+        tiffs=directory("incoming_data/aqueduct_flood"),
     shell:
         """
-        mkdir --parents ./incoming_data/aqueduct
-        wget --no-clobber --directory-prefix=./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inuncoast_{wildcards.RCP}_{wildcards.SUBSIDENCE}_{wildcards.YEAR}_{wildcards.RP}_{wildcards.SLR}.tif
-        """
-
-
-rule download_aqueduct_river_all:
-    input:
-        tiffs=expand(
-            "incoming_data/aqueduct/inunriver_{RCP}_{GCM}_{YEAR}_{RP}.tif",
-            RCP=["historical"],
-            GCM=["WATCH".zfill(14)],
-            YEAR=["hist"],
-            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
-        )
-        + expand(
-            "incoming_data/aqueduct/inunriver_{RCP}_{GCM}_{YEAR}_{RP}.tif",
-            RCP=["rcp4p5", "rcp8p5"],
-            GCM=[gcm.zfill(14) for gcm in AQUEDUCT_GCMS],
-            YEAR=AQUEDUCT_YEARS,
-            RP=[f"rp{str(rp).zfill(4)}" for rp in AQUEDUCT_RPS],
-        ),
-
-
-rule download_aqueduct_river:
-    output:
-        tiff="incoming_data/aqueduct/inunriver_{RCP}_{GCM}_{YEAR}_{RP}.tif",
-    shell:
-        """
-        mkdir --parents ./incoming_data/aqueduct
-        wget --no-clobber --directory-prefix=./incoming_data/aqueduct http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inunriver_{wildcards.RCP}_{wildcards.GCM}_{wildcards.YEAR}_{wildcards.RP}.tif
+        mkdir --parents incoming_data/aqueduct_flood
+        cd incoming_data/aqueduct_flood
+        aws s3 sync --no-sign-request s3://wri-projects/AqueductFloodTool/download/v2/ . \
+            --exclude '*' \
+            --include '*.tif'
         """
 
 
@@ -108,84 +122,13 @@ rule download_gridfinder:
 #
 # Extreme heat/drought
 #
-rule download_isimip:
-    # The first two blocks expand to the extreme heat TIFFs
-    #
-    # Most drought models have all four GCMs and use "2005soc" in future
-    # "h08", "lpjml", "pcr-globwb", "watergap2" use "histsoc" for baseline
-    # "clm45" uses "2005soc" for baseline
-    # MPI-HM has no "hadgem2-es"
-    # Jules-W1 and Orchidee use "nosoc"
+checkpoint download_isimip:
     output:
-        tiffs=expand(
-            "data/lange2020_hwmid-humidex_{GCM}_ewembi_{RCP}_nosoc_co2_leh_global_annual_2006_2099_{EPOCH}_{METRIC}.tif",
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            RCP=["rcp26", "rcp60"],
-            EPOCH=["2030", "2050", "2080"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_hwmid-humidex_{GCM}_ewembi_historical_nosoc_co2_leh_global_annual_1861_2005_{EPOCH}_{METRIC}.tif",
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            EPOCH=["baseline"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_{RCP}_2005soc_co2_led_global_annual_2006_2099_{EPOCH}_{METRIC}.tif",
-            MODEL=["clm45", "h08", "lpjml", "pcr-globwb", "watergap2"],
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            RCP=["rcp26", "rcp60"],
-            EPOCH=["2030", "2050", "2080"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_historical_histsoc_co2_led_global_annual_1861_2005_{EPOCH}_{METRIC}.tif",
-            MODEL=["h08", "lpjml", "pcr-globwb", "watergap2"],
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            EPOCH=["baseline"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_historical_2005soc_co2_led_global_annual_1861_2005_{EPOCH}_{METRIC}.tif",
-            MODEL=["clm45"],
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            EPOCH=["baseline"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_{RCP}_2005soc_co2_led_global_annual_2006_2099_{EPOCH}_{METRIC}.tif",
-            MODEL=["mpi-hm"],
-            GCM=["gfdl-esm2m", "ipsl-cm5a-lr", "miroc5"],
-            RCP=["rcp26", "rcp60"],
-            EPOCH=["2030", "2050", "2080"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_historical_histsoc_co2_led_global_annual_1861_2005_{EPOCH}_{METRIC}.tif",
-            MODEL=["mpi-hm"],
-            GCM=["gfdl-esm2m", "ipsl-cm5a-lr", "miroc5"],
-            EPOCH=["baseline"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_{RCP}_nosoc_co2_led_global_annual_2006_2099_{EPOCH}_{METRIC}.tif",
-            MODEL=["jules-w1", "orchidee"],
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            RCP=["rcp26", "rcp60"],
-            EPOCH=["2030", "2050", "2080"],
-            METRIC=["occurrence", "exposure"],
-        )
-        + expand(
-            "data/lange2020_{MODEL}_{GCM}_ewembi_historical_nosoc_co2_led_global_annual_1861_2005_{EPOCH}_{METRIC}.tif",
-            MODEL=["jules-w1", "orchidee"],
-            GCM=["gfdl-esm2m", "hadgem2-es", "ipsl-cm5a-lr", "miroc5"],
-            EPOCH=["baseline"],
-            METRIC=["occurrence", "exposure"],
-        ),
+        tiffs=directory("incoming_data/isimip_heat_drought"),
     shell:
         """
-        mkdir --parents incoming_data/isimip
-        cd incoming_data/isimip
+        mkdir --parents incoming_data/isimip_heat_drought
+        cd incoming_data/isimip_heat_drought
         zenodo_get 10.5281/zenodo.7732393
         """
 
@@ -193,26 +136,30 @@ rule download_isimip:
 #
 # JRC GHSL data
 #
-rule download_population_all:
+rule summarise_population:
     # EPOCH available in: range(1975, 2031, 5)
     # RESOLUTION available in: 4326_3ss, 4326_30ss, 54009_100, 54009_1000
     input:
-        expand(
-            "incoming_data/ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
-            EPOCH=[2020],
+        tiffs=expand(
+            "incoming_data/jrc_ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+            EPOCH=range(1975, 2031, 5),
             RESOLUTION=["4326_30ss"],
         ),
+    output:
+        csv="data/{ISO3}/jrc_ghsl.csv",
+    run:
+        raise NotImplementedError()
 
 
 rule download_population:
     output:
-        tiff="incoming_data/ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+        tiff="incoming_data/jrc_ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
     shell:
         """
-        mkdir --parents ./incoming_data/ghsl
-        wget --no-clobber --directory-prefix=./incoming_data/ghsl \
-        https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
-        unzip {input} -d ./incoming_data/ghsl
+        mkdir --parents ./incoming_data/jrc_ghsl
+        wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
+            https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
+        unzip {input} -d ./incoming_data/jrc_ghsl
         """
 
 
@@ -221,13 +168,16 @@ rule download_population:
 #
 rule download_osm:
     output:
-        pbf="incoming_data/osm/planet-231106.osm.pbf",
+        checksum="incoming_data/osm/planet-231106.osm.pbf.md5",
     shell:
         """
         mkdir --parents incoming_data/osm
-        aws s3 cp --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/planet-231106.osm.pbf ./incoming_data/osm/
-        aws s3 cp --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/planet-231106.osm.pbf.md5 ./incoming_data/osm/
-        md5sum --check ./incoming_data/osm/planet-231106.osm.pbf.md5
+        cd incoming_data/osm
+        aws s3 sync --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/ . \
+            --exclude '*' \
+            --include planet-231106.osm.pbf \
+            --include planet-231106.osm.pbf.md5
+        md5sum --check planet-231106.osm.pbf.md5
         """
 
 
@@ -259,16 +209,52 @@ rule download_storm:
         """
 
 
+def summarise_storm_input(wildcards):
+    # should be the full list of STORM tiffs
+    # like "incoming_data/storm/{slug}.tif"
+    original_storm_tiffs = rules.download_storm.output.tiffs
+
+    # should match ISO3 to "JAM" or whichever country code is requested in summary
+    # and return a full list of file paths under "data/JAM/aqueduct_flood/*.tif"
+    iso3 = wildcards.ISO3
+    clipped_tiffs = []
+    for fname in original_storm_tiffs:
+        slug = fname.replace("incoming_data/storm/", "").replace(".tif", "")
+        clipped_tiffs.append(f"data/{iso3}/storm/{slug}__{iso3}.tif")
+    return clipped_tiffs
+
+
+rule summarise_storm:
+    input:
+        tiffs=rules.download_storm.output.tiffs,
+    output:
+        csv="data/{ISO3}/storm.csv",
+    run:
+        raise NotImplementedError()
+
+
 #
 # WRI Power Plants
 #
 rule download_powerplants:
     output:
-        csv="input/powerplants/global_power_plant_database.csv",
+        csv="incoming_data/wri_powerplants/global_power_plant_database.csv",
     shell:
         """
-        mkdir --parents incoming_data/powerplants
-        cd incoming_data/powerplants
+        mkdir --parents incoming_data/wri_powerplants
+        cd incoming_data/wri_powerplants
         wget https://wri-dataportal-prod.s3.amazonaws.com/manual/global_power_plant_database_v_1_3.zip
         unzip -o global_power_plant_database_v_1_3.zip
         """
+
+
+rule powerplants_to_gpkg:
+    input:
+        csv=rules.download_powerplants.output.csv,
+    output:
+        gpkg="incoming_data/wri_powerplants/global_power_plant_database.gpkg",
+    run:
+        df = pandas.read_csv(input.csv)
+        geoms = geopandas.points_from_xy(df.longitude, df.latitude)
+        gdf = geopandas.GeoDataFrame(data=df, geometry=geoms, crs="EPSG:4326")
+        gdf.to_file(output.gpkg, driver="GPKG", engine="pyogrio")

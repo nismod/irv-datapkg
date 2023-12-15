@@ -14,5 +14,6 @@ dependencies:
   - geopandas>=0.14.0 # geospatial dataframes
   - osmium-tool==1.14.0 # openstreetmap extracts
   - pyyaml # read YAML files
+  - pyogrio # faster geospatial i/o
   - snakemake==7.32.4 # workflow management
   - snakefmt # Snakefile formatting
