@@ -1,4 +1,6 @@
+from collections import defaultdict
 import json
+from operator import itemgetter
 import sys
 from glob import glob
 from pathlib import Path
@@ -9,7 +11,9 @@ import yaml
 import irv_datapkg
 
 
-def package(iso3: str, package_title: str, metadata: list[dict]) -> dict:
+def package(
+    iso3: str, package_title: str, metadata: list[dict], checksums: dict[list]
+) -> dict:
     package = {
         "name": iso3,
         "title": package_title,
@@ -30,26 +34,27 @@ def package(iso3: str, package_title: str, metadata: list[dict]) -> dict:
                 "title": "Creative Commons Attribution 4.0",
             },
         ],
-        "resources": resources(iso3, metadata),
+        "resources": resources(iso3, metadata, checksums),
     }
     return package
 
 
-def resources(iso3: str, metadata: list[dict]) -> list[dict]:
+def resources(iso3: str, metadata: list[dict], checksums: dict[list]) -> list[dict]:
     resources = []
     for meta in metadata:  # read from YAML
+        name = meta["name"]
+        sorted_filemeta = sorted(checksums[name], key=itemgetter(0))
+        assert len(sorted_filemeta), f"No file metadata found for {name}"
+        paths, hashes, bytes = zip(*sorted_filemeta)
         resources.append(
             {
-                "name": meta["name"],
+                "name": name,
                 "version": meta["version"],
-                "path": [
-                    # read from disk
-                    f"https://irv-autopkg.s3.eu-west-2.amazonaws.com/{iso3}/{meta['name']}/*"
-                ],
+                "path": paths,
                 "description": meta["description"],
                 "format": meta["data_formats"],
-                "bytes": 0,  # read from disk
-                "hashes": [],  # read from disk
+                "bytes": bytes,
+                "hashes": hashes,
                 "license": meta["data_license"],
                 "sources": [
                     {
@@ -71,6 +76,19 @@ def read_metadata(base_path: Path) -> list[dict]:
     return metadata
 
 
+def read_checksums(package_path: Path) -> dict[str, list]:
+    checksums = defaultdict(list)
+    with open(package_path / "md5sum.txt") as fh:
+        for line in fh:
+            checksum, path_str = line.strip().split("  ")
+            path = Path(path_str)
+            dataset = str(path.parent)
+            st_size = (package_path / path).stat().st_size
+            checksums[dataset].append((path_str, checksum, st_size))
+
+    return checksums
+
+
 if __name__ == "__main__":
     try:
         iso3: str = snakemake.wildcards.ISO3
@@ -88,7 +106,13 @@ if __name__ == "__main__":
     boundary_name: str = boundaries.set_index("CODE_A3").loc[iso3, "NAME"]
 
     metadata: list[dict] = read_metadata(base_path)
-    package_metadata: dict = package(iso3, f"{boundary_name} Data Package", metadata)
+    checksums: dict[str, list] = read_checksums(out_fname.parent)
+    package_metadata: dict = package(
+        iso3,
+        f"Infrastructure Resilience Assessment Data Package for {boundary_name}",
+        metadata,
+        checksums,
+    )
 
     with open(out_fname, "w") as fh:
         json.dump(package_metadata, fh, indent=2)

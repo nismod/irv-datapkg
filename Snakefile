@@ -43,7 +43,16 @@ rule zip:
 
 
 rule datapackage:
-    # required input must entail all the datapackage files
+    input:
+        checksums="data/{ISO3}/md5sum.txt",
+    output:
+        json="data/{ISO3}/datapackage.json",
+    script:
+        "scripts/generate_datapackage_json.py"
+
+rule checksums:
+    # input must require all the data package files
+    # - summary CSVs require multiple TIFFs in turn
     input:
         "data/{ISO3}/aqueduct_flood.csv",
         "data/{ISO3}/gridfinder/grid__{ISO3}.gpkg",
@@ -55,10 +64,12 @@ rule datapackage:
         "data/{ISO3}/storm.csv",
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
     output:
-        json="data/{ISO3}/datapackage.json",
-    script:
-        "scripts/generate_datapackage_json.py"
-
+        checksums="data/{ISO3}/md5sum.txt",
+    shell:
+        """
+        cd data/{wildcards.ISO3}
+        md5sum {aqueduct,gridfinder,isimip_heat_drought,jrc_ghsl,openstreetmap,storm,wri_powerplants}/*.{tif,gpkg} > {output.checksums}
+        """
 
 rule clip_tiff:
     input:
@@ -485,7 +496,7 @@ rule powerplants_to_gpkg:
     input:
         csv=rules.download_powerplants.output.csv,
     output:
-        gpkg="incoming_data/wri_powerplants/global_power_plant_database.gpkg",
+        gpkg="incoming_data/wri_powerplants/wri-powerplants.gpkg",
     run:
         df = pandas.read_csv(input.csv)
         geoms = geopandas.points_from_xy(df.longitude, df.latitude)
