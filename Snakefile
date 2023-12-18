@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from glob import glob
 
@@ -20,9 +21,25 @@ rule all:
         expand("data/{ISO3}/datapackage.json", ISO3=BOUNDARIES.CODE_A3),
 
 
+rule all_compressed:
+    input:
+        expand("data/{ISO3}.zip", ISO3=BOUNDARIES.CODE_A3),
+
+
 rule clean:
     shell:
         "rm -rf data"
+
+
+rule zip:
+    input:
+        "data/{ISO3}/datapackage.json",
+    output:
+        "data/{ISO3}.zip",
+    shell:
+        """
+        zip -r data/{ISO3}.zip data/{ISO3}
+        """
 
 
 rule datapackage:
@@ -195,6 +212,7 @@ rule summarise_isimip:
             r"lange2020_(?P<model>[^_]+)_(?P<gcm>[^_]+)_ewembi_(?P<rcp>[^_]+)_(?P<soc>[^_]+)_(?P<co2>[^_]+)_(?P<variable>[^_]+)_global_annual_\d+_\d+_(?P<epoch>[^_]+)"
         )
 
+
         def map_var(var):
             if var == "leh":
                 return "extreme_heat"
@@ -202,6 +220,7 @@ rule summarise_isimip:
                 return "drought"
             else:
                 return "na"
+
 
         meta["hazard"] = meta.variable.apply(map_var)
         meta.drop(columns=["soc", "co2", "variable"], inplace=True)
@@ -214,6 +233,7 @@ rule summarise_isimip:
         meta = meta[columns].sort_values(by=columns)
 
         meta.to_csv(output.csv, index=False)
+
 
 checkpoint download_isimip:
     output:
@@ -234,30 +254,84 @@ checkpoint download_isimip:
 #
 # JRC GHSL data
 #
-rule summarise_population:
-    # EPOCH available in: range(1975, 2031, 5)
-    # RESOLUTION available in: 4326_3ss, 4326_30ss, 54009_100, 54009_1000
+rule summarise_jrc_ghsl:
     input:
         tiffs=expand(
-            "incoming_data/jrc_ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+            "incoming_data/jrc_ghsl/{DATASET}_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
             EPOCH=range(1975, 2031, 5),
             RESOLUTION=["4326_30ss"],
+            DATASET=[
+                "GHS_POP",
+                "GHS_BUILT_S",
+                "GHS_BUILT_S_NRES",
+                "GHS_BUILT_V",
+                "GHS_BUILT_V_NRES",
+            ],
         ),
+        height_tiffs=expand(
+            "incoming_data/jrc_ghsl/GHS_BUILT_H_{HEIGHT}_E2018_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+            RESOLUTION=["4326_3ss"],
+            HEIGHT=["AGBH", "ANBH"],
+        ),
+        pdf="incoming_data/jrc_ghsl/GHSL_Data_Package_2023.pdf",
     output:
         csv="data/{ISO3}/jrc_ghsl.csv",
+        pdf="data/{ISO3}/jrc_ghsl/GHSL_Data_Package_2023.pdf",
     run:
-        raise NotImplementedError()
+        shutil.copyfile(input.pdf, output.pdf)
+
+        paths = glob(f"data/{wildcards.ISO3}/jrc_ghsl/*.tif")
+        summary = pandas.DataFrame({"path": paths})
+
+        meta = summary.path.str.extract(
+            r"^(?P<dataset>.*)_E(?P<epoch>\d+)_GLOBE_(?P<release>[^_]+)_(?P<resolution>\w+)_V1_0.tif"
+        )
+        meta["path"] = summary.path
+
+        columns = ["dataset", "release", "resolution", "epoch", "path"]
+        meta = meta[columns].sort_values(by=columns)
+
+        meta.to_csv(output.csv, index=False)
 
 
-rule download_population:
+
+rule download_jrc_ghsl_pop_built_s:
+    # EPOCH available in: range(1975, 2031, 5)
+    # RESOLUTION available in: 4326_3ss, 4326_30ss, 54009_100, 54009_1000
+    # DATASET: GHS_POP, GHS_BUILT_S, GHS_BUILT_S_NRES, GHS_BUILT_V, GHS_BUILT_V_NRES
+    # DATASET_PREFIX trims _NRES: GHS_POP, GHS_BUILT_S, GHS_BUILT_V
     output:
-        tiff="incoming_data/jrc_ghsl/GHS_POP_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+        tiff="incoming_data/jrc_ghsl/{DATASET}_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+    params:
+        DATASET_PREFIX=lambda wildcards, output: wildcards.DATASET.replace("_NRES", ""),
     shell:
         """
-        mkdir --parents ./incoming_data/jrc_ghsl
         wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
-            https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_POP_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
-        unzip {input} -d ./incoming_data/jrc_ghsl
+            https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/{params.DATASET_PREFIX}_GLOBE_R2023A/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
+        unzip -n ./incoming_data/jrc_ghsl/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip -d ./incoming_data/jrc_ghsl
+        """
+
+
+rule download_jrc_ghsl_built_h:
+    # HEIGHT available in:  Average of the Gross Building Height (AGBH) or Average of the Net Building Height (ANBH)
+    # RESOLUTION available in: 4326_3ss, 54009_100
+    output:
+        tiff="incoming_data/jrc_ghsl/GHS_BUILT_H_{HEIGHT}_E2018_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
+    shell:
+        """
+        wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
+            https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_H_GLOBE_R2023A/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
+        unzip -n ./incoming_data/jrc_ghsl/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip -d ./incoming_data/jrc_ghsl
+        """
+
+
+rule download_jrc_ghsl_docs:
+    output:
+        pdf="incoming_data/jrc_ghsl/GHSL_Data_Package_2023.pdf",
+    shell:
+        """
+        wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
+            https://ghsl.jrc.ec.europa.eu/documents/GHSL_Data_Package_2023.pdf
         """
 
 
@@ -292,19 +366,21 @@ rule filter_osm_data:
             {input.pbf}
         """
 
+
 def boundary_bbox(wildcards):
     geom = boundary_geom(wildcards.ISO3)
     minx, miny, maxx, maxy = geom.bounds
     # LEFT,BOTTOM,RIGHT,TOP
     return f"{minx},{miny},{maxx},{maxy}"
 
+
 rule extract_osm_data:
     input:
-        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf"
+        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf",
     output:
-        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf"
+        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",
     params:
-        bbox_str=boundary_bbox
+        bbox_str=boundary_bbox,
     shell:
         """
         osmium extract \
@@ -318,13 +394,14 @@ rule extract_osm_data:
 
 rule convert_osm_data:
     input:
-        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf"
+        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",
     output:
-        gpkg="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.gpkg"
+        gpkg="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.gpkg",
     shell:
         """
         OSM_CONFIG_FILE=config/{wildcards.SECTOR}.conf.ini ogr2ogr -f GPKG -overwrite {output.gpkg} {input.pbf}
         """
+
 
 #
 # STORM tropical cyclones
@@ -382,17 +459,20 @@ rule summarise_storm:
             r"STORM_FIXED_RETURN_PERIODS_(?P<gcm>[^_]+)_(?P<rp>[^_]+)_YR_RP"
         )
 
+
         def map_gcm_to_rcp(gcm):
             if gcm == "constant":
                 return "historical"
             else:
                 return "8.5"
 
+
         def map_gcm_to_epoch(gcm):
             if gcm == "constant":
                 return "2010"
             else:
                 return "2050"
+
 
         meta["hazard"] = "cyclone"
         meta["rcp"] = meta.gcm.apply(map_gcm_to_rcp)
