@@ -33,7 +33,8 @@ rule datapackage:
         "data/{ISO3}/gridfinder/targets__{ISO3}.tif",
         "data/{ISO3}/isimip_heat_drought.csv",
         "data/{ISO3}/jrc_ghsl.csv",
-        "data/{ISO3}/osm_road_and_rail/osm-road-and-rail__{ISO3}.gpkg",
+        "data/{ISO3}/openstreetmap/openstreetmap_rail__{ISO3}.gpkg",
+        "data/{ISO3}/openstreetmap/openstreetmap_roads-tertiary__{ISO3}.gpkg",
         "data/{ISO3}/storm.csv",
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
     output:
@@ -265,7 +266,7 @@ rule download_population:
 #
 rule download_osm:
     output:
-        checksum="incoming_data/osm/planet-231106.osm.pbf.md5",
+        pbf=protected("incoming_data/osm/planet-231106.osm.pbf"),
     shell:
         """
         mkdir --parents incoming_data/osm
@@ -277,6 +278,53 @@ rule download_osm:
         md5sum --check planet-231106.osm.pbf.md5
         """
 
+
+rule filter_osm_data:
+    input:
+        pbf="incoming_data/osm/planet-231106.osm.pbf",
+    output:
+        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf",
+    shell:
+        """
+        osmium tags-filter \
+            --expressions=config/{wildcards.SECTOR}.txt \
+            --output={output.pbf} \
+            {input.pbf}
+        """
+
+def boundary_bbox(wildcards):
+    geom = boundary_geom(wildcards.ISO3)
+    minx, miny, maxx, maxy = geom.bounds
+    # LEFT,BOTTOM,RIGHT,TOP
+    return f"{minx},{miny},{maxx},{maxy}"
+
+rule extract_osm_data:
+    input:
+        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf"
+    output:
+        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf"
+    params:
+        bbox_str=boundary_bbox
+    shell:
+        """
+        osmium extract \
+            --bbox {params.bbox_str} \
+            --set-bounds \
+            --strategy=complete_ways \
+            --output={output.pbf} \
+            {input.pbf}
+        """
+
+
+rule convert_osm_data:
+    input:
+        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf"
+    output:
+        gpkg="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.gpkg"
+    shell:
+        """
+        OSM_CONFIG_FILE=config/{wildcards.SECTOR}.conf.ini ogr2ogr -f GPKG -overwrite {output.gpkg} {input.pbf}
+        """
 
 #
 # STORM tropical cyclones
