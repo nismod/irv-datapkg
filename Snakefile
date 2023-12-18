@@ -257,21 +257,14 @@ checkpoint download_isimip:
 rule summarise_jrc_ghsl:
     input:
         tiffs=expand(
-            "incoming_data/jrc_ghsl/{DATASET}_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
-            EPOCH=range(1975, 2031, 5),
+            "data/{{ISO3}}/jrc_ghsl/{DATASET}_E{EPOCH}_GLOBE_R2023A_{RESOLUTION}_V1_0__{{ISO3}}.tif",
+            EPOCH=["2020", "2025"],
             RESOLUTION=["4326_30ss"],
             DATASET=[
                 "GHS_POP",
                 "GHS_BUILT_S",
                 "GHS_BUILT_S_NRES",
-                "GHS_BUILT_V",
-                "GHS_BUILT_V_NRES",
             ],
-        ),
-        height_tiffs=expand(
-            "incoming_data/jrc_ghsl/GHS_BUILT_H_{HEIGHT}_E2018_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
-            RESOLUTION=["4326_3ss"],
-            HEIGHT=["AGBH", "ANBH"],
         ),
         pdf="incoming_data/jrc_ghsl/GHSL_Data_Package_2023.pdf",
     output:
@@ -284,7 +277,7 @@ rule summarise_jrc_ghsl:
         summary = pandas.DataFrame({"path": paths})
 
         meta = summary.path.str.extract(
-            r"^(?P<dataset>.*)_E(?P<epoch>\d+)_GLOBE_(?P<release>[^_]+)_(?P<resolution>\w+)_V1_0.tif"
+            r"jrc_ghsl/(?P<dataset>.*)_E(?P<epoch>\d+)_GLOBE_(?P<release>[^_]+)_(?P<resolution>\w+)_V1_0"
         )
         meta["path"] = summary.path
 
@@ -309,19 +302,6 @@ rule download_jrc_ghsl_pop_built_s:
         wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
             https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/{params.DATASET_PREFIX}_GLOBE_R2023A/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
         unzip -n ./incoming_data/jrc_ghsl/{wildcards.DATASET}_E{wildcards.EPOCH}_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip -d ./incoming_data/jrc_ghsl
-        """
-
-
-rule download_jrc_ghsl_built_h:
-    # HEIGHT available in:  Average of the Gross Building Height (AGBH) or Average of the Net Building Height (ANBH)
-    # RESOLUTION available in: 4326_3ss, 54009_100
-    output:
-        tiff="incoming_data/jrc_ghsl/GHS_BUILT_H_{HEIGHT}_E2018_GLOBE_R2023A_{RESOLUTION}_V1_0.tif",
-    shell:
-        """
-        wget --no-clobber --directory-prefix=./incoming_data/jrc_ghsl \
-            https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_H_GLOBE_R2023A/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}/V1-0/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip
-        unzip -n ./incoming_data/jrc_ghsl/GHS_BUILT_H_{wildcards.HEIGHT}_E2018_GLOBE_R2023A_{wildcards.RESOLUTION}_V1_0.zip -d ./incoming_data/jrc_ghsl
         """
 
 
