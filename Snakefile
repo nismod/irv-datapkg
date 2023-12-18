@@ -68,7 +68,7 @@ rule checksums:
     shell:
         """
         cd data/{wildcards.ISO3}
-        md5sum {aqueduct,gridfinder,isimip_heat_drought,jrc_ghsl,openstreetmap,storm,wri_powerplants}/*.{tif,gpkg} > {output.checksums}
+        md5sum **/*.* | grep "tif\|gpkg" | sort -k 2 > md5sum.txt
         """
 
 rule clip_tiff:
