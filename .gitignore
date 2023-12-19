@@ -4,6 +4,11 @@
 # Data
 data
 incoming_data
+zenodo
+*.qgz
+
+# Secrets
+*_TOKEN
 
 # Python
 __pycache__
