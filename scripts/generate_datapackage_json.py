@@ -109,7 +109,7 @@ if __name__ == "__main__":
     checksums: dict[str, list] = read_checksums(out_fname.parent)
     package_metadata: dict = package(
         iso3,
-        f"Infrastructure Resilience Assessment Data Package for {boundary_name}",
+        f"Infrastructure Climate Resilience Assessment Data Starter Kit for {boundary_name}",
         metadata,
         checksums,
     )
