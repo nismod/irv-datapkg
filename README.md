@@ -34,6 +34,21 @@ micromamba activate datapkg
 The data packages are produced using a
 [`snakemake`](https://snakemake.readthedocs.io/) workflow.
 
+The workflow expects `ZENODO_TOKEN` to be set as an environment variable - this
+must be set before running any workflow steps.
+
+If not interacting with Zenodo, this can be a dummy string:
+
+```bash
+echo "placeholder" > ZENODO_TOKEN
+```
+
+Export from the file to the environment:
+
+```bash
+export ZENODO_TOKEN=$(cat ZENODO_TOKEN)
+```
+
 Check what will be run, if we ask for everything produced by the rule `all`,
 before running the workflow for real:
 
@@ -46,6 +61,25 @@ Run the workflow, asking for `all`, using 8 cores, with verbose log messages:
 ```bash
 snakemake --cores 8 --verbose all
 ```
+
+### Upload and publish
+
+To publish, first [create a Zenodo token](https://zenodo.org/account/settings/applications/tokens/new/),
+save it and export it as the `ZENODO_TOKEN` environment variable.
+
+Upload a single data package:
+
+```bash
+snakemake --cores 1 zenodo/GBR.deposited
+```
+
+Publish (cannot be undone) either programmatically:
+
+```bash
+snakemake --cores 1 zenodo/GBR.published
+```
+
+Or after review online, through the Zenodo website ([sandbox](https://sandbox.zenodo.org/me/uploads), [live](https://zenodo.org/me/uploads))
 
 ### Development Notes
 
