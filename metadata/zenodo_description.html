@@ -1,0 +1,139 @@
+<p>
+  This starter data kit collects extracts from global, open datasets relating to climate hazards and infrastructure
+  systems. These extracts have been clipped to the national scale (or subnational, in cases where national boundaries
+  have been split, generally to separate outlying islands or non-contiguous regions).
+</p>
+
+<p>
+  Human-induced climate change is increasing the frequency and severity of climate and weather extremes. This is causing
+  widespread, adverse impacts to societies, economies and infrastructures. Climate risk analysis is essential to inform
+  policy decisions aimed at reducing risk. Yet, access to data is often a barrier, particularly in low and middle-income
+  countries. Data are often scattered, hard to find, in formats that are difficult to use or requiring considerable
+  technical expertise. Nevertheless, there are global, open datasets which provide some information about climate
+  hazards, society, infrastructure and the economy. This "data starter kit" aims to kickstart the process and act as a
+  starting point for further model development and scenario analysis.
+</p>
+
+<p>Hazards:</p>
+<ul>
+  <li>coastal and river flooding (Ward et al, 2020)</li>
+  <li>extreme heat and drought (Russell et al 2023, derived from Lange et al, 2020)</li>
+  <li>tropical cyclone wind speeds (Russell 2022, derived from Bloemendaal et al 2020 and Bloemendaal et al 2022)</li>
+</ul>
+
+<p>Exposure:</p>
+<ul>
+  <li>population (Schiavina et al, 2023)</li>
+  <li>built-up area (Pesaresi et al, 2023)</li>
+  <li>roads (OpenStreetMap, 2023)</li>
+  <li>railways (OpenStreetMap, 2023)</li>
+  <li>power plants (Global Energy Observatory et al, 2018)</li>
+  <li>power transmission lines (Arderne et al, 2020)</li>
+</ul>
+
+<p>
+  The spatial intersection of hazard and exposure datasets is a first step to analyse vulnerability and risk to
+  infrastructure and people.
+</p>
+
+<p>
+  To learn more about related concepts, there is a free short course available through the Open University on
+  <a href="https://www.open.edu/openlearncreate/course/view.php?id=11539">Infrastructure and Climate Resilience</a>.
+  This <a href="https://opsis.eci.ox.ac.uk/courses/2-infra-for-resil/">overview of the course</a> has more details.
+</p>
+
+<p>
+  These Python libraries may be a useful place to start analysis of the data in the packages produced by this workflow:
+</p>
+
+<ul>
+  <li>
+    <a href="https://github.com/tomalrussell/snkit"><code>snkit</code></a> helps clean network data
+  </li>
+  <li>
+    <a href="https://github.com/nismod/snail"><code>nismod-snail</code></a> is designed to help implement infrastructure
+    exposure, damage and risk calculations
+  </li>
+</ul>
+
+<p>
+  The <a href="https://github.com/nismod/open-gira"><code>open-gira</code></a>
+  repository contains a larger workflow for global-scale open-data infrastructure risk and resilience analysis.
+</p>
+
+<p>
+  For a more developed example, some of these datasets were key inputs to a regional climate risk assessment of current
+  and future flooding risks to transport networks in East Africa, which has a related online visualisation tool at
+  <a href="https://east-africa.infrastructureresilience.org/">https://east-africa.infrastructureresilience.org/</a>
+  and is described in detail in Hickford et al (2023).
+</p>
+
+<p><strong>References</strong></p>
+
+<ul>
+  <li>
+    Arderne, Christopher, Nicolas, Claire, Zorn, Conrad, & Koks, Elco E. (2020). Data from: Predictive mapping of the
+    global power system using open data [Data set]. In Nature Scientific Data (1.1.1, Vol. 7, Number Article 19).
+    Zenodo.
+    <a href="https://doi.org/10.5281/zenodo.3628142">https://doi.org/10.5281/zenodo.3628142</a>
+  </li>
+  <li>
+    Bloemendaal, Nadia; de Moel, H. (Hans); Muis, S; Haigh, I.D. (Ivan); Aerts, J.C.J.H. (Jeroen) (2020): STORM tropical
+    cyclone wind speed return periods. 4TU.ResearchData. Dataset.
+    <a href="https://doi.org/10.4121/12705164.v3">https://doi.org/10.4121/12705164.v3</a>
+  </li>
+  <li>
+    Bloemendaal, Nadia; de Moel, Hans; Dullaart, Job; Haarsma, R.J. (Reindert); Haigh, I.D. (Ivan); Martinez, Andrew B.;
+    et al. (2022): STORM climate change tropical cyclone wind speed return periods. 4TU.ResearchData. Dataset.
+    <a href="https://doi.org/10.4121/14510817.v3">https://doi.org/10.4121/14510817.v3</a>
+  </li>
+  <li>
+    Global Energy Observatory, Google, KTH Royal Institute of Technology in Stockholm, Enipedia, World Resources
+    Institute. (2018) Global Power Plant Database. Published on Resource Watch and Google Earth Engine;
+    <a href="http://resourcewatch.org/">http://resourcewatch.org/</a>
+  </li>
+  <li>
+    Hickford et al (2023) Decision support systems for resilient strategic transport networks in low-income countries
+    &ndash; Final Report. Available online:
+    <a
+      href="https://transport-links.com/hvt-publications/final-report-decision-support-systems-for-resilient-strategic-transport-networks-in-low-income-countries"
+      >https://transport-links.com/hvt-publications/final-report-decision-support-systems-for-resilient-strategic-transport-networks-in-low-income-countries</a
+    >
+  </li>
+  <li>
+    Lange, S., Volkholz, J., Geiger, T., Zhao, F., Vega, I., Veldkamp, T., et al. (2020). Projecting exposure to extreme
+    climate impact events across six event categories and three spatial scales. Earth's Future, 8, e2020EF001616.
+    <a href="https://doi.org/10.1029/2020EF001616">https://doi.org/10.1029/2020EF001616</a>
+  </li>
+  <li>
+    Pesaresi M., Politis P. (2023): GHS-BUILT-S R2023A - GHS built-up surface grid, derived from Sentinel2 composite and
+    Landsat, multitemporal (1975-2030) European Commission, Joint Research Centre (JRC) PID:
+    <a href="http://data.europa.eu/89h/9f06f36f-4b11-47ec-abb0-4f8b7b1d72ea"
+      >http://data.europa.eu/89h/9f06f36f-4b11-47ec-abb0-4f8b7b1d72ea</a
+    >, doi:10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA
+  </li>
+  <li>
+    Russell, T., Nicholas, C., & Bernhofen, M. (2023). Annual probability of extreme heat and drought events, derived
+    from Lange et al 2020 (Version 2) [Data set]. Zenodo.
+    <a href="https://doi.org/10.5281/zenodo.8147088">https://doi.org/10.5281/zenodo.8147088</a>
+  </li>
+  <li>
+    OpenStreetMap contributors, Russell T., Thomas F., nismod/datapkg contributors (2023) Road and Rail networks derived
+    from OpenStreetMap. [Dataset] Available at
+    <a href="https://global.infrastructureresilience.org">https://global.infrastructureresilience.org</a>
+  </li>
+  <li>
+    Schiavina M., Freire S., Carioli A., MacManus K. (2023): GHS-POP R2023A - GHS population grid multitemporal
+    (1975-2030).European Commission, Joint Research Centre (JRC) PID:
+    <a href="http://data.europa.eu/89h/2ff68a52-5b5b-4a22-8f40-c41da8332cfe"
+      >http://data.europa.eu/89h/2ff68a52-5b5b-4a22-8f40-c41da8332cfe</a
+    >, doi:10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE
+  </li>
+  <li>
+    Ward, P.J., H.C. Winsemius, S. Kuzma, M.F.P. Bierkens, A. Bouwman, H. de Moel, A. Díaz Loaiza, et al. (2020)
+    Aqueduct Floods Methodology. Technical Note. Washington, D.C.: World Resources Institute. Available online at:
+    <a href="https://www.wri.org/publication/aqueduct-floods-methodology"
+      >www.wri.org/publication/aqueduct-floods-methodology</a
+    >.
+  </li>
+</ul>

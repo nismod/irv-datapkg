@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 from glob import glob
@@ -5,15 +6,29 @@ from glob import glob
 import geopandas
 import irv_datapkg
 import pandas
+import requests
 
-# import spatialpandas
+DATAPKG_VERSION = "1.0.0"
+ZENODO_URL = "sandbox.zenodo.org"
 
 BOUNDARIES = irv_datapkg.read_boundaries(Path("."))
 BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
 
 
+envvars:
+    "ZENODO_TOKEN",
+
+
 def boundary_geom(iso3):
     return BOUNDARY_LU.loc[iso3, "geometry"]
+
+
+#
+# Top-level rules
+#
+rule clean:
+    shell:
+        "rm -rf data"
 
 
 rule all:
@@ -21,27 +36,190 @@ rule all:
         expand("data/{ISO3}/datapackage.json", ISO3=BOUNDARIES.CODE_A3),
 
 
-rule all_compressed:
+rule all_uploaded:
     input:
-        expand("data/{ISO3}.zip", ISO3=BOUNDARIES.CODE_A3),
+        expand("zenodo/{ISO3}.deposited", ISO3=BOUNDARIES.CODE_A3),
 
 
-rule clean:
-    shell:
-        "rm -rf data"
+rule all_published:
+    input:
+        expand("zenodo/{ISO3}.published", ISO3=BOUNDARIES.CODE_A3),
 
 
+#
+# Deposit to Zenodo
+#
 rule zip:
     input:
         "data/{ISO3}/datapackage.json",
     output:
-        "data/{ISO3}.zip",
+        "zenodo/{ISO3}.zip",
     shell:
         """
-        zip -r data/{ISO3}.zip data/{ISO3}
+        zip -r zenodo/{wildcards.ISO3}.zip data/{wildcards.ISO3}
         """
 
 
+rule create_deposition:
+    output:
+        json="zenodo/{ISO3}.deposition.json",
+    run:
+        # Create deposition
+        params = {"access_token": os.environ["ZENODO_TOKEN"]}
+        r = requests.post(
+            f"https://{ZENODO_URL}/api/deposit/depositions", params=params, json={}
+        )
+        r.raise_for_status()
+
+        # Deposition details
+        deposition = r.json()
+
+        # Save details
+        with open(output.json, "w") as fh:
+            json.dump(deposition, fh, indent=2)
+
+
+rule deposit:
+    input:
+        deposition="zenodo/{ISO3}.deposition.json",
+        archive="zenodo/{ISO3}.zip",
+        datapackage="data/{ISO3}/datapackage.json",
+    output:
+        touch("zenodo/{ISO3}.deposited"),
+    run:
+        params = {"access_token": os.environ["ZENODO_TOKEN"]}
+
+        with open(input.deposition, "r") as fh:
+            deposition = json.load(fh)
+
+        with open(input.datapackage, "r") as fh:
+            datapackage = json.load(fh)
+
+        deposition_id = deposition["id"]
+        bucket_url = deposition["links"]["bucket"]
+
+        # Upload files
+        path = Path(input.archive)
+        print("Uploading", path)
+        with open(path, "rb") as fh:
+            r = requests.put(
+                f"{bucket_url}/{path.name}",
+                data=fh,
+                params=params,
+            )
+            print(r.json())
+            r.raise_for_status()
+
+            # Set up metadata
+        centroid = boundary_geom(wildcards.ISO3).centroid
+        place_name = BOUNDARY_LU.loc[wildcards.ISO3, "NAME"]
+
+        with open("metadata/zenodo_notes.html", "r") as fh:
+            notes = fh.read()
+
+        with open("metadata/zenodo_description.html", "r") as fh:
+            description = fh.read()
+
+        # licenses strictly include "cc-by-sa-4.0", "odbl-1.0", "cc0-1.0"
+        metadata = {
+            "metadata": {
+                "title": datapackage["title"],
+                "description": description,
+                "locations": [
+                    {"lat": centroid.y, "lon": centroid.x, "place": place_name}
+                ],
+                "upload_type": "dataset",
+                "access_right": "open",
+                "license": "cc-by-sa-4.0",
+                "creators": [
+                    {
+                        "name": "Russell, Tom",
+                        "affiliation": "University of Oxford",
+                        "orcid": "0000-0002-0081-400X",
+                    },
+                    {
+                        "name": "Jaramillo, Diana",
+                        "affiliation": "University of Oxford",
+                    },
+                    {
+                        "name": "Nicholas, Chris",
+                    },
+                    {
+                        "name": "Thomas, Fred",
+                        "affiliation": "University of Oxford",
+                    },
+                    {
+                        "name": "Pant, Raghav",
+                        "affiliation": "University of Oxford",
+                        "orcid": "0000-0003-4648-5261"
+                    },
+                    {
+                        "name": "Hall, Jim W.",
+                        "affiliation": "University of Oxford",
+                        "orcid": "0000-0002-2024-9191"
+                    },
+                ],
+                "references": [
+                    "Arderne, Christopher; Nicolas, Claire; Zorn, Conrad; & Koks, Elco E. (2020). Data from: Predictive mapping of the global power system using open data [Data set]. In Nature Scientific Data (1.1.1, Vol. 7, Number Article 19). Zenodo. DOI:10.5281/zenodo.3628142",
+                    "Bloemendaal, Nadia; de Moel, H. (Hans); Muis, S; Haigh, I.D. (Ivan); Aerts, J.C.J.H. (Jeroen) (2020): STORM tropical cyclone wind speed return periods. 4TU.ResearchData. Dataset. DOI:10.4121/12705164.v3",
+                    "Bloemendaal, Nadia; de Moel, Hans; Dullaart, Job; Haarsma, R.J. (Reindert); Haigh, I.D. (Ivan); Martinez, Andrew B.; et al. (2022): STORM climate change tropical cyclone wind speed return periods. 4TU.ResearchData. Dataset. DOI:10.4121/14510817.v3",
+                    "Global Energy Observatory, Google, KTH Royal Institute of Technology in Stockholm, Enipedia, World Resources Institute. (2018) Global Power Plant Database. Published on Resource Watch and Google Earth Engine; http://resourcewatch.org/",
+                    "Lange, S., Volkholz, J., Geiger, T., Zhao, F., Vega, I., Veldkamp, T., et al. (2020). Projecting exposure to extreme climate impact events across six event categories and three spatial scales. Earth's Future, 8, e2020EF001616. DOI:10.1029/2020EF001616",
+                    "Pesaresi M., Politis P. (2023): GHS-BUILT-S R2023A - GHS built-up surface grid, derived from Sentinel2 composite and Landsat, multitemporal (1975-2030) European Commission, Joint Research Centre (JRC) PID: http://data.europa.eu/89h/9f06f36f-4b11-47ec-abb0-4f8b7b1d72ea, DOI:10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA",
+                    "Russell, T., Nicholas, C., & Bernhofen, M. (2023). Annual probability of extreme heat and drought events, derived from Lange et al 2020 (Version 2) [Data set]. Zenodo. DOI:10.5281/zenodo.8147088",
+                    "OpenStreetMap contributors, Russell T., Thomas F., nismod/datapkg contributors (2023) Road and Rail networks derived from OpenStreetMap. [Dataset] Available at: https://global.infrastructureresilience.org",
+                    "Schiavina M., Freire S., Carioli A., MacManus K. (2023): GHS-POP R2023A - GHS population grid multitemporal (1975-2030).European Commission, Joint Research Centre (JRC) PID: http://data.europa.eu/89h/2ff68a52-5b5b-4a22-8f40-c41da8332cfe, DOI:10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE",
+                    "Ward, P.J., H.C. Winsemius, S. Kuzma, M.F.P. Bierkens, A. Bouwman, H. de Moel, A. Díaz Loaiza, et al. (2020) Aqueduct Floods Methodology. Technical Note. Washington, D.C.: World Resources Institute. Available online at: https://www.wri.org/publication/aqueduct-floods-methodology",
+                ],
+                "related_identifiers": [
+                    {"identifier":"10.5281/zenodo.3628142", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.4121/12705164.v3", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.4121/14510817.v3", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.1029/2020EF001616", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.5281/zenodo.8147088", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {"identifier":"10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                ],
+                "communities": [{"identifier": "ccg"}],
+                "notes": notes,
+                "version": DATAPKG_VERSION,
+            }
+        }
+
+        # Upload metadata
+        r = requests.put(
+            f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}",
+            params=params,
+            json=metadata,
+        )
+        print(r.json())
+        r.raise_for_status()
+
+
+rule publish:
+    input:
+        "zenodo/{ISO3}.deposited",
+        deposition="zenodo/{ISO3}.deposition.json",
+    output:
+        touch("zenodo/{ISO3}.published")
+    run:
+        params = {"access_token": os.environ["ZENODO_TOKEN"]}
+
+        with open(input.deposition, "r") as fh:
+            deposition = json.load(fh)
+
+        deposition_id = deposition["id"]
+
+        r = requests.post(
+            f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/publish",
+            params=params
+        )
+        r.raise_for_status()
+
+
+#
+# Data package
+#
 rule datapackage:
     input:
         checksums="data/{ISO3}/md5sum.txt",
@@ -49,6 +227,7 @@ rule datapackage:
         json="data/{ISO3}/datapackage.json",
     script:
         "scripts/generate_datapackage_json.py"
+
 
 rule checksums:
     # input must require all the data package files
@@ -70,6 +249,7 @@ rule checksums:
         cd data/{wildcards.ISO3}
         md5sum **/*.* | grep "tif\|gpkg" | sort -k 2 > md5sum.txt
         """
+
 
 rule clip_tiff:
     input:
@@ -296,7 +476,6 @@ rule summarise_jrc_ghsl:
         meta = meta[columns].sort_values(by=columns)
 
         meta.to_csv(output.csv, index=False)
-
 
 
 rule download_jrc_ghsl_pop_built_s:
