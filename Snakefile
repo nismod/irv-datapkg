@@ -7,6 +7,7 @@ import geopandas
 import irv_datapkg
 import pandas
 import requests
+import shapely
 
 DATAPKG_VERSION = "1.0.0"
 ZENODO_URL = "sandbox.zenodo.org"
@@ -543,10 +544,20 @@ def boundary_bbox(wildcards):
     # LEFT,BOTTOM,RIGHT,TOP
     return f"{minx},{miny},{maxx},{maxy}"
 
+rule geojson_boundary:
+    output:
+        json="data/{ISO3}/boundary__{ISO3}.geojson",
+    run:
+        geom = boundary_geom(wildcards.ISO3)
+        json = '{"type":"Feature","geometry": %s}' % shapely.to_geojson(geom)
+        with open(output.json, 'w') as fh:
+            fh.write(json)
+
 
 rule extract_osm_data:
     input:
         pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf",
+        json="data/{ISO3}/boundary__{ISO3}.geojson",
     output:
         pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",
     params:
@@ -554,7 +565,7 @@ rule extract_osm_data:
     shell:
         """
         osmium extract \
-            --bbox {params.bbox_str} \
+            --polygon {input.json} \
             --set-bounds \
             --strategy=complete_ways \
             --output={output.pbf} \
