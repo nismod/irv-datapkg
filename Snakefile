@@ -9,8 +9,9 @@ import pandas
 import requests
 import shapely
 
-DATAPKG_VERSION = "1.0.0"
-ZENODO_URL = "sandbox.zenodo.org"
+DATAPKG_VERSION = "0.1.0"
+# ZENODO_URL = "sandbox.zenodo.org"
+ZENODO_URL = "zenodo.org"
 
 BOUNDARIES = irv_datapkg.read_boundaries(Path("."))
 BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
