@@ -122,7 +122,6 @@ rule deposit:
         with open("metadata/zenodo_description.html", "r") as fh:
             description = fh.read()
 
-        # licenses strictly include "cc-by-sa-4.0", "odbl-1.0", "cc0-1.0"
         metadata = {
             "metadata": {
                 "title": datapackage["title"],
@@ -149,16 +148,17 @@ rule deposit:
                     {
                         "name": "Thomas, Fred",
                         "affiliation": "University of Oxford",
+                        "orcid": "0000-0002-8441-5638",
                     },
                     {
                         "name": "Pant, Raghav",
                         "affiliation": "University of Oxford",
-                        "orcid": "0000-0003-4648-5261"
+                        "orcid": "0000-0003-4648-5261",
                     },
                     {
                         "name": "Hall, Jim W.",
                         "affiliation": "University of Oxford",
-                        "orcid": "0000-0002-2024-9191"
+                        "orcid": "0000-0002-2024-9191",
                     },
                 ],
                 "references": [
