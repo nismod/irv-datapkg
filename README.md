@@ -1,5 +1,7 @@
 # Infrastructure Resilience Assessment Data Packages
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10411140.svg)](https://doi.org/10.5281/zenodo.10411140)
+
 Standalone workflow to create national scale open-data packages from global open
 datasets.
 
