@@ -175,13 +175,41 @@ rule deposit:
                     "Ward, P.J., H.C. Winsemius, S. Kuzma, M.F.P. Bierkens, A. Bouwman, H. de Moel, A. Díaz Loaiza, et al. (2020) Aqueduct Floods Methodology. Technical Note. Washington, D.C.: World Resources Institute. Available online at: https://www.wri.org/publication/aqueduct-floods-methodology",
                 ],
                 "related_identifiers": [
-                    {"identifier":"10.5281/zenodo.3628142", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.4121/12705164.v3", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.4121/14510817.v3", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.1029/2020EF001616", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.5281/zenodo.8147088", "relation": "isDerivedFrom", "resource_type": "dataset"},
-                    {"identifier":"10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE", "relation": "isDerivedFrom", "resource_type": "dataset"},
+                    {
+                        "identifier": "10.5281/zenodo.3628142",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.4121/12705164.v3",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.4121/14510817.v3",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.1029/2020EF001616",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.5281/zenodo.8147088",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
+                    {
+                        "identifier": "10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE",
+                        "relation": "isDerivedFrom",
+                        "resource_type": "dataset",
+                    },
                 ],
                 "communities": [{"identifier": "ccg"}],
                 "notes": notes,
@@ -204,7 +232,7 @@ rule publish:
         "zenodo/{ISO3}.deposited",
         deposition="zenodo/{ISO3}.deposition.json",
     output:
-        touch("zenodo/{ISO3}.published")
+        touch("zenodo/{ISO3}.published"),
     run:
         params = {"access_token": os.environ["ZENODO_TOKEN"]}
 
@@ -215,7 +243,7 @@ rule publish:
 
         r = requests.post(
             f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/publish",
-            params=params
+            params=params,
         )
         r.raise_for_status()
 
@@ -546,13 +574,14 @@ def boundary_bbox(wildcards):
     # LEFT,BOTTOM,RIGHT,TOP
     return f"{minx},{miny},{maxx},{maxy}"
 
+
 rule geojson_boundary:
     output:
         json="data/{ISO3}/boundary__{ISO3}.geojson",
     run:
         geom = boundary_geom(wildcards.ISO3)
         json = '{"type":"Feature","geometry": %s}' % shapely.to_geojson(geom)
-        with open(output.json, 'w') as fh:
+        with open(output.json, "w") as fh:
             fh.write(json)
 
 
