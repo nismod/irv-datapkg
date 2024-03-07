@@ -83,6 +83,20 @@ snakemake --cores 1 zenodo/GBR.published
 
 Or after review online, through the Zenodo website ([sandbox](https://sandbox.zenodo.org/me/uploads), [live](https://zenodo.org/me/uploads))
 
+### Post-publication
+
+To get a quick list of DOIs from the Zenodo package json:
+
+```bash
+cat zenodo/*.deposition.json | jq '.metadata.prereserve_doi.doi'
+```
+
+To generate [`records.csv`](./records.csv) with details of published packages:
+
+```bash
+python scripts/published_metadata.py
+```
+
 ### Development Notes
 
 In case of warnings about `GDAL_DATA` not being set, try running:
