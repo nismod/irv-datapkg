@@ -33,9 +33,9 @@ rule create_deposition:
 
 rule deposit:
     input:
-        deposition="zenodo/{ISO3}.deposition.json",
-        archive="zenodo/{ISO3}.zip",
-        datapackage="data/{ISO3}/datapackage.json",
+        deposition=ancient("zenodo/{ISO3}.deposition.json"),
+        archive=ancient("zenodo/{ISO3}.zip"),
+        datapackage=ancient("data/{ISO3}/datapackage.json"),
     output:
         touch("zenodo/{ISO3}.deposited"),
     run:
@@ -179,8 +179,8 @@ rule deposit:
 
 rule publish:
     input:
-        "zenodo/{ISO3}.deposited",
-        deposition="zenodo/{ISO3}.deposition.json",
+        ancient("zenodo/{ISO3}.deposited"),
+        deposition=ancient("zenodo/{ISO3}.deposition.json"),
     output:
         touch("zenodo/{ISO3}.published"),
     run:
