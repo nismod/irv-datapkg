@@ -1,28 +1,32 @@
 import csv
 import os
+import time
 from glob import glob
 
 import requests
 import json
 
 if __name__ == "__main__":
-    base_path = os.path.join("..", os.path.dirname(__file__))
+    base_path = os.path.join(os.path.dirname(__file__), "..")
     deposition_fnames = glob(os.path.join(base_path, "zenodo", "*.json"))
     depositions = []
     for fname in sorted(deposition_fnames):
         with open(fname, "r") as fh:
             dep = json.load(fh)
+            dep["fname"] = fname
             depositions.append(dep)
-
-    ids = [dep["id"] for dep in depositions]
 
     with open(os.path.join(base_path, "records.csv"), "w") as fh:
         writer = csv.writer(fh)
         writer.writerow(
-            "zenodo_deposition_id", "country", "title", "doi", "url", "citation"
+            ("zenodo_deposition_id", "country", "title", "doi", "url", "citation")
         )
-        for dep_id in ids:
+        for dep in depositions:
+            dep_id = dep["id"]
             r = requests.get(f"https://zenodo.org/api/records/{dep_id}")
+            print(r.status_code, dep["fname"])
+            if r.status_code != 200:
+                continue
             pub = r.json()
             title = pub["title"]
             doi = pub["doi"]
@@ -31,4 +35,5 @@ if __name__ == "__main__":
                 "Infrastructure Climate Resilience Assessment Data Starter Kit for ", ""
             )
             url = f"https://zenodo.org/records/{dep_id}"
-            writer.writerow(dep_id, country, title, doi, url, citation)
+            writer.writerow((dep_id, country, title, doi, url, citation))
+            time.sleep(1)
