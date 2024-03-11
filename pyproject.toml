@@ -13,7 +13,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["geopandas>=0.13", "shapely>=2.0", "pyproj", "GDAL"]
+dependencies = ["geopandas>=0.13", "shapely>=2.0", "pyproj", "GDAL==3.4.1"]
 
 [project.urls]
 "Homepage" = "https://github.com/nismod/irv-datapkg"
