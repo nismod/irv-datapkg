@@ -17,3 +17,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/nismod/irv-datapkg"
 "Bug Tracker" = "https://github.com/nismod/irv-datapkg/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
