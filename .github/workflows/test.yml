@@ -30,6 +30,7 @@ jobs:
           sudo apt-get -y install gdal-bin libgdal-dev
           ogrinfo --version
           python -m pip install --upgrade pip
+          pip install gdal==3.4.1  # pin to match apt version
           pip install --verbose .[dev]
       - name: Lint with flake8
         run: |
