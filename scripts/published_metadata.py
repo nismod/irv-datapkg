@@ -1,3 +1,9 @@
+"""Generate CSV of Zenodo records published
+
+Run outside of the Snakemake workflow, as occasional job to record the
+publication of datasets.
+"""
+
 import csv
 import os
 import time

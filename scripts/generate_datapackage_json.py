@@ -1,3 +1,8 @@
+"""Generate datapackage.json for full dataset
+
+Run as the final data-generation step in the Snakemake workflow.
+"""
+
 from collections import defaultdict
 import json
 from operator import itemgetter
