@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: copernicus_dem
+description: Copernicus Digital Elevation Model
+version: x
+dataset_name: copernicus_dem
+data_author: x
+data_title: x
+data_title_long: x
+data_summary: >
+  x
+
+data_citation: >
+  x
+
+data_license:
+  name: x
+  title: x
+  path: x
+
+data_origin_url: x
+data_formats: ["GeoTIFF"]

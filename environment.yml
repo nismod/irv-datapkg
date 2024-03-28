@@ -8,6 +8,7 @@ dependencies:
   - pip
   - pip:
       - zenodo_get>=1.5.1 # download from Zenodo
+      - cdsapi # copernicus data api
       - -e . # irv_datapkg helper
   - black # Python formatting
   - gdal>=3.3 # command-line tools for spatial data

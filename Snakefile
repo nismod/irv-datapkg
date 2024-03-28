@@ -19,6 +19,8 @@ BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
 
 envvars:
     "ZENODO_TOKEN",
+    "COPERNICUS_CDS_URL",
+    "COPERNICUS_CDS_API_KEY"
 
 
 def boundary_geom(iso3):
@@ -73,6 +75,8 @@ rule checksums:
         "data/{ISO3}/openstreetmap/openstreetmap_roads-tertiary__{ISO3}.gpkg",
         "data/{ISO3}/storm.csv",
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
+        "data/{ISO3}/copernicus_lulc/copernicus_lulc__{ISO3}.tif",
+        "data/{ISO3}/copernicus_dem/copernicus_dem__{ISO3}.tif",
     output:
         checksums="data/{ISO3}/md5sum.txt",
     shell:
@@ -113,4 +117,6 @@ include: "rules/jrc_ghsl.smk"
 include: "rules/openstreetmap.smk"
 include: "rules/storm.smk"
 include: "rules/wri_powerplants.smk"
+include: "rules/copernicus_lulc.smk"
+include: "rules/copernicus_dem.smk" 
 include: "rules/zenodo.smk"
