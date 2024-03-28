@@ -14,3 +14,6 @@ zenodo
 __pycache__
 *.py[c,i]
 *.egg-info
+
+# Mac 
+._*
