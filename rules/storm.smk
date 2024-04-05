@@ -20,9 +20,11 @@ rule download_storm:
         ),
     shell:
         """
-        mkdir --parents incoming_data/storm
         cd incoming_data/storm
-        zenodo_get 10.5281/zenodo.7438145
+        zenodo_get -w links.txt 10.5281/zenodo.10931452
+        wget -nc -i links.txt
+        md5sum -c md5sums.txt
+        unzip STORM_FIXED_RETURN_PERIODS.zip
         """
 
 
