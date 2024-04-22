@@ -1,7 +1,6 @@
 name: datapkg
 channels:
-  - bioconda # for snakemake
-  - conda-forge # for most other packages
+  - conda-forge
   - defaults
 dependencies:
   - python=3.11
@@ -15,5 +14,5 @@ dependencies:
   - osmium-tool==1.16.0 # openstreetmap extracts
   - pyyaml # read YAML files
   - pyogrio # faster geospatial i/o
-  - snakemake==7.32.4 # workflow management
-  - snakefmt # Snakefile formatting
+  - bioconda::snakemake==7.32.4 # workflow management
+  - bioconda::snakefmt # Snakefile formatting
