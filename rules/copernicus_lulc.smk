@@ -23,7 +23,7 @@ rule convert_lulc:
     input:
         zip="incoming_data/copernicus_lulc/archive.zip",
     output:
-        tif = "incoming_data/copernicus_lulc/copernicus_lulc.tif",
+        tif = "incoming_data/copernicus_lulc/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.tif",
     shell:
         """ 
         cd incoming_data/copernicus_lulc

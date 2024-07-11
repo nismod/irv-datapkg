@@ -15,7 +15,7 @@ rule convert_dem:
     input:
         dir="incoming_data/copernicus_dem/glo-90",
     output:
-        tiff="incoming_data/copernicus_dem/copernicus_dem.tif",
+        tiff="incoming_data/copernicus_dem/glo-90/copernicus_dsm_cog_30_DEM.tif",
     shell:
         """
         cd incoming_data/copernicus_dem/glo-90
