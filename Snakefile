@@ -77,6 +77,7 @@ rule checksums:
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
         "data/{ISO3}/copernicus_lulc/copernicus_lulc__{ISO3}.tif",
         "data/{ISO3}/copernicus_dem/copernicus_dem__{ISO3}.tif",
+        "data/{ISO3}/gadm__{ISO3}.tif",
     output:
         checksums="data/{ISO3}/md5sum.txt",
     shell:
@@ -119,4 +120,5 @@ include: "rules/storm.smk"
 include: "rules/wri_powerplants.smk"
 include: "rules/copernicus_lulc.smk"
 include: "rules/copernicus_dem.smk" 
+include: "rules/gadm.smk" 
 include: "rules/zenodo.smk"
