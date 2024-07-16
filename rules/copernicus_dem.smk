@@ -3,7 +3,7 @@
 #
 rule download_dem:
     output:
-        dir=directory("incoming_data/copernicus_dem/glo-90"),
+        dir=directory("incoming_data/copernicus_dem"),
     shell:
         """
         mkdir -p incoming_data/copernicus_dem
@@ -13,13 +13,19 @@ rule download_dem:
 
 rule convert_dem:
     input:
-        dir="incoming_data/copernicus_dem/glo-90",
+        txt="incoming_data/copernicus_dem/tileList.txt",
     output:
-        tiff="incoming_data/copernicus_dem/glo-90/copernicus_dsm_cog_30_DEM.tif",
+        tiff="incoming_data/copernicus_dem/copernicus_dem.tif",
     shell:
         """
-        cd incoming_data/copernicus_dem/glo-90
-        gdalbuildvrt -input_file_list tiffs.txt copernicus_dsm_cog_30_DEM.vrt
-        gdal_translate -co "COMPRESS=LZW" -co "TILED=yes" -co "BIGTIFF=YES" -of "GTiff" copernicus_dsm_cog_30_DEM.vrt copernicus_dsm_cog_30_DEM.tif
+        cd incoming_data/copernicus_dem
+        gdalbuildvrt -input_file_list tileList.txt copernicus_dsm_cog_30_DEM.vrt
+        gdal_translate \
+            -co "COMPRESS=LZW" \
+            -co "TILED=yes" \
+            -co "BIGTIFF=YES" \
+            -of "GTiff" \
+            copernicus_dsm_cog_30_DEM.vrt \
+            copernicus_dem.tif
         """
 

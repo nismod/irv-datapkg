@@ -23,7 +23,7 @@ rule convert_lulc:
     input:
         zip="incoming_data/copernicus_lulc/archive.zip",
     output:
-        tif = "incoming_data/copernicus_lulc/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.tif",
+        tif = "incoming_data/copernicus_lulc/copernicus_lulc.tif",
     shell:
         """ 
         cd incoming_data/copernicus_lulc
@@ -38,6 +38,6 @@ rule convert_lulc:
             -tr 0.002777777777778 0.002777777777778 \
             -t_srs EPSG:4326 \
             NETCDF:C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc:lccs_class \
-            C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.tif
+            copernicus_lulc.tif
 
         """
