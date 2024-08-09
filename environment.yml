@@ -10,6 +10,7 @@ dependencies:
       - zenodo_get>=1.5.1 # download from Zenodo
       - cdsapi # copernicus data api
       - -e . # irv_datapkg helper
+  - awscli # connect to AWS, download from S3
   - black # Python formatting
   - gdal>=3.3 # command-line tools for spatial data
   - geopandas>=0.14.0 # geospatial dataframes
