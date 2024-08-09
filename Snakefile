@@ -19,8 +19,8 @@ BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
 
 envvars:
     "ZENODO_TOKEN",
-    "COPERNICUS_CDS_URL",
-    "COPERNICUS_CDS_API_KEY"
+    "CDSAPI_URL",
+    "CDSAPI_KEY"
 
 
 def boundary_geom(iso3):
@@ -119,6 +119,6 @@ include: "rules/openstreetmap.smk"
 include: "rules/storm.smk"
 include: "rules/wri_powerplants.smk"
 include: "rules/copernicus_lulc.smk"
-include: "rules/copernicus_dem.smk" 
-include: "rules/gadm.smk" 
+include: "rules/copernicus_dem.smk"
+include: "rules/gadm.smk"
 include: "rules/zenodo.smk"

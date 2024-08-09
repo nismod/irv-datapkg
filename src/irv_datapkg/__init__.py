@@ -1,15 +1,14 @@
-from dataclasses import dataclass
+import os
 import shlex
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import argparse
-import os
 
-import geopandas
-import shapely
-import pyproj
 import cdsapi
+import geopandas
+import pyproj
+import shapely
 
 from osgeo import gdal
 from shapely.ops import transform
@@ -87,26 +86,28 @@ def crop_raster(
 
     subprocess.run(shlex.split(cmd), check=True)
 
-def download_from_CDS(dataset_name: str, variable: str, file_format: str, version: str, year: str, output_path: str) -> None:
+
+def download_from_CDS(
+    dataset_name: str,
+    request: dict,
+    output_path: str,
+) -> None:
     """
     Download a resource from the Copernicus CDS API, given appropriate credentials.
 
-    Requires COPERNICUS_CDS_URL and COPERNICUS_CDS_API_KEY to be in the environment.
+    Requires CDSAPI_URL and CDSAPI_KEY to be in the environment.
     For more details see: https://cds.climate.copernicus.eu/api-how-to
 
     Args:
         dataset_name: Name of dataset to download
-        variable: Name of variable to request
-        file_format: Desired file format e.g. zip
-        version: Version of dataset
-        year: Year of dataset applicability
+        request: Dictionary defining request, could include:
+            variable: Name of variable to request
+            file_format: Desired file format e.g. zip
+            version: Version of dataset
+            year: Year of dataset applicability
         output_path: Where to save the downloaded file
     """
-
-    client = cdsapi.Client(
-        url=os.environ.get("COPERNICUS_CDS_URL"),
-        key=os.environ.get("COPERNICUS_CDS_API_KEY")
-    )
+    client = cdsapi.Client()
 
     # N.B. Files are covered by licences which need to be manually accepted, e.g.
     # https://cds.climate.copernicus.eu/cdsapp/#!/terms/satellite-land-cover
@@ -114,9 +115,9 @@ def download_from_CDS(dataset_name: str, variable: str, file_format: str, versio
     #
     # Ideally we could programmatically accept the necessary licence conditions
     # the below code is an attempt at that, but fails with an HTTP 403, not
-    # logged in when trying to simulate a user acceptance 
+    # logged in when trying to simulate a user acceptance
     #
-    #   API_URL = os.environ.get("COPERNICUS_CDS_URL")
+    #   API_URL = os.environ.get("CDSAPI_URL")
     #   payloads = [
     #       [{"terms_id":"vito-proba-v","revision":1}],
     #       [{"terms_id":"satellite-land-cover","revision":1}],
@@ -132,11 +133,6 @@ def download_from_CDS(dataset_name: str, variable: str, file_format: str, versio
 
     client.retrieve(
         dataset_name,
-        {
-            'variable': variable,
-            'format': file_format,
-            'version': version,
-            'year': year,
-        },
-        output_path
+        request,
+        output_path,
     )
