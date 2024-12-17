@@ -74,8 +74,10 @@ rule deposit:
         if deposition["submitted"]:
             # Request a new deposition to draft a new version
 
-            # NOTE: this seems to fail if there's already a draft - workaround is to search for the draft and discard it manually
             # POST /api/deposit/depositions/:id/actions/newversion
+            # NOTE: this seems to fail if there's already a draft - workaround is to search for the draft and discard it manually
+            # could search all depositions for unsubmitted and discard?
+            # or could search for unsubmitted matching "conceptdoi" and use it?
             r = requests.post(f'https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion', headers=headers)
             r.raise_for_status()
             response = r.json()
