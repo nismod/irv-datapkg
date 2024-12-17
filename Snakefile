@@ -77,7 +77,6 @@ rule checksums:
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
         "data/{ISO3}/copernicus_lulc/copernicus_lulc__{ISO3}.tif",
         "data/{ISO3}/copernicus_dem/copernicus_dem__{ISO3}.tif",
-        # "data/{ISO3}/gadm__{ISO3}.gpkg",
     output:
         checksums="data/{ISO3}/md5sum.txt",
     shell:
