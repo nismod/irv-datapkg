@@ -83,7 +83,7 @@ rule checksums:
     shell:
         """
         cd data/{wildcards.ISO3}
-        md5sum **/*.* | grep "tif\|gpkg" | sort -k 2 > md5sum.txt
+        md5sum **/*.* | grep "tif\\|gpkg" | sort -k 2 > md5sum.txt
         """
 
 
