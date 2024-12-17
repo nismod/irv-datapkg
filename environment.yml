@@ -1,21 +1,21 @@
 name: datapkg
 channels:
+  - nodefaults
   - bioconda # for snakemake
   - conda-forge # for most other packages
-  - defaults
 dependencies:
-  - python=3.11
+  - python=3.12
   - pip
   - pip:
-      - zenodo_get>=1.5.1 # download from Zenodo
-      - cdsapi # copernicus data api
+      - zenodo_get>=1.6.1 # download from Zenodo
+      - cdsapi>=0.7.2 # copernicus data api
       - -e . # irv_datapkg helper
   - awscli # connect to AWS, download from S3
   - black # Python formatting
   - gdal>=3.3 # command-line tools for spatial data
-  - geopandas>=0.14.0 # geospatial dataframes
+  - geopandas>=1.0.1 # geospatial dataframes
   - osmium-tool==1.16.0 # openstreetmap extracts
   - pyyaml # read YAML files
   - pyogrio # faster geospatial i/o
-  - snakemake==7.32.4 # workflow management
+  - snakemake==8.25.5 # workflow management
   - snakefmt # Snakefile formatting
