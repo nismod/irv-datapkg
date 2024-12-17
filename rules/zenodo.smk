@@ -27,8 +27,22 @@ rule create_deposition:
         deposition = r.json()
 
         # Save details
-        with open(output.json, "w") as fh:
-            json.dump(deposition, fh, indent=2)
+        write_deposition(output.json, deposition)
+
+def get_deposition(deposition_id):
+    params = {"access_token": os.environ["ZENODO_TOKEN"]}
+    r = requests.get(f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}", params=params)
+    r.raise_for_status()
+    deposition = r.json()
+    return deposition
+
+def log_deposition(iso3, deposition, deposition_id):
+    with open(f"zenodo/{iso3}.deposition.{deposition_id}.{datetime.now().isoformat()}.json", "w") as fh:
+        json.dump(deposition, fh, indent=2)
+
+def write_deposition(fname, deposition):
+    with open(fname, "w") as fh:
+        json.dump(deposition, fh, indent=2)
 
 
 rule deposit:
@@ -48,6 +62,24 @@ rule deposit:
             datapackage = json.load(fh)
 
         deposition_id = deposition["id"]
+
+        # Check and create a new version if the last one was submitted
+
+        # Get latest deposition
+        deposition = get_deposition(deposition_id)
+
+        log_deposition(wildcards.ISO3, deposition, deposition_id)
+
+        if deposition["submitted"]:
+            r = requests.post(f'https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion', params=params)
+            r.raise_for_status()
+            response = r.json()
+            deposition_id = response["latest_draft"].split("/")[-1]
+            deposition = get_deposition(deposition_id)
+            log_deposition(wildcards.ISO3, deposition, deposition_id)
+            # NOTE overwriting an input file (should be okay, it's marked as ancient)
+            write_deposition(input.deposition, deposition)
+
         bucket_url = deposition["links"]["bucket"]
 
         # Upload files
@@ -62,7 +94,7 @@ rule deposit:
             print(r.json())
             r.raise_for_status()
 
-            # Set up metadata
+        # Set up metadata
         centroid = boundary_geom(wildcards.ISO3).centroid
         place_name = BOUNDARY_LU.loc[wildcards.ISO3, "NAME"]
 
