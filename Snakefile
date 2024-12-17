@@ -1,5 +1,6 @@
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from glob import glob
 
@@ -9,9 +10,9 @@ import pandas
 import requests
 import shapely
 
-DATAPKG_VERSION = "0.1.0"
-# ZENODO_URL = "sandbox.zenodo.org"
-ZENODO_URL = "zenodo.org"
+DATAPKG_VERSION = "0.2.0"
+ZENODO_URL = "sandbox.zenodo.org"
+# ZENODO_URL = "zenodo.org"
 
 BOUNDARIES = irv_datapkg.read_boundaries(Path("."))
 BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
@@ -19,6 +20,8 @@ BOUNDARY_LU = BOUNDARIES.set_index("CODE_A3")
 
 envvars:
     "ZENODO_TOKEN",
+    "CDSAPI_URL",
+    "CDSAPI_KEY"
 
 
 def boundary_geom(iso3):
@@ -73,12 +76,14 @@ rule checksums:
         "data/{ISO3}/openstreetmap/openstreetmap_roads-tertiary__{ISO3}.gpkg",
         "data/{ISO3}/storm.csv",
         "data/{ISO3}/wri_powerplants/wri-powerplants__{ISO3}.gpkg",
+        "data/{ISO3}/copernicus_lulc/copernicus_lulc__{ISO3}.tif",
+        "data/{ISO3}/copernicus_dem/copernicus_dem__{ISO3}.tif",
     output:
         checksums="data/{ISO3}/md5sum.txt",
     shell:
         """
         cd data/{wildcards.ISO3}
-        md5sum **/*.* | grep "tif\|gpkg" | sort -k 2 > md5sum.txt
+        md5sum **/*.* | grep "tif\\|gpkg" | sort -k 2 > md5sum.txt
         """
 
 
@@ -113,4 +118,6 @@ include: "rules/jrc_ghsl.smk"
 include: "rules/openstreetmap.smk"
 include: "rules/storm.smk"
 include: "rules/wri_powerplants.smk"
+include: "rules/copernicus_lulc.smk"
+include: "rules/copernicus_dem.smk"
 include: "rules/zenodo.smk"

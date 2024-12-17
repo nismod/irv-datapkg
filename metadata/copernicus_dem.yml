@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: copernicus_dem
+description: Copernicus 90m Digital Elevation Model
+version: 2023_1
+dataset_name: copernicus_glo90
+data_author: European Union and ESA
+data_title: Copernicus GLO-90
+data_title_long: Copernicus Global Digital Elevation Model (WorldDEM GLO-90)
+
+data_summary: >
+  The Copernicus DEM is a Digital Surface Model (DSM) which represents the
+  surface of the Earth including buildings, infrastructure and vegetation.
+  GLO-90 provides worldwide coverage at 90 meters. Note that  ocean areas do not
+  have tiles, there one can assume height values equal to zero. Data is provided
+  as Cloud Optimized GeoTIFFs and comes from Copernicus DEM 2021 release.
+
+data_citation: >
+  Copernicus DEM - Global Digital Elevation Model (2021)
+  https://doi.org/10.5270/ESA-c5d3d65 (produced using Copernicus WorldDEM™-90 ©
+  DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided
+  under COPERNICUS by the European Union and ESA; all rights reserved)
+
+data_license:
+  name: Copernicus-DEM-EULA
+  title: Licence for Copernicus DEM instance COP-DEM-GLO-90-F Global 90m Full, Free & Open
+  path: https://esa.maps.eox.at/copernicus-dem_eula.pdf
+
+data_origin_url: https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM
+data_formats: ["GeoTIFF"]

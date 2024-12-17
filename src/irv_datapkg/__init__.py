@@ -1,12 +1,14 @@
-from dataclasses import dataclass
+import os
 import shlex
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+import cdsapi
 import geopandas
-import shapely
 import pyproj
+import shapely
 
 from osgeo import gdal
 from shapely.ops import transform
@@ -83,3 +85,54 @@ def crop_raster(
         cmd = cmd + f" -co {creation_option}"
 
     subprocess.run(shlex.split(cmd), check=True)
+
+
+def download_from_CDS(
+    dataset_name: str,
+    request: dict,
+    output_path: str,
+) -> None:
+    """
+    Download a resource from the Copernicus CDS API, given appropriate credentials.
+
+    Requires CDSAPI_URL and CDSAPI_KEY to be in the environment.
+    For more details see: https://cds.climate.copernicus.eu/api-how-to
+
+    Args:
+        dataset_name: Name of dataset to download
+        request: Dictionary defining request, could include:
+            variable: Name of variable to request
+            file_format: Desired file format e.g. zip
+            version: Version of dataset
+            year: Year of dataset applicability
+        output_path: Where to save the downloaded file
+    """
+    client = cdsapi.Client()
+
+    # N.B. Files are covered by licences which need to be manually accepted, e.g.
+    # https://cds.climate.copernicus.eu/cdsapp/#!/terms/satellite-land-cover
+    # https://cds.climate.copernicus.eu/cdsapp/#!/terms/vito-proba-v
+    #
+    # Ideally we could programmatically accept the necessary licence conditions
+    # the below code is an attempt at that, but fails with an HTTP 403, not
+    # logged in when trying to simulate a user acceptance
+    #
+    #   API_URL = os.environ.get("CDSAPI_URL")
+    #   payloads = [
+    #       [{"terms_id":"vito-proba-v","revision":1}],
+    #       [{"terms_id":"satellite-land-cover","revision":1}],
+    #   ]
+    #   for payload in payloads:
+    #       client._api(
+    #           url=f"{API_URL.rstrip('/')}.ui/user/me/terms-and-conditions",
+    #           request=payload,
+    #           method="post"
+    #       )
+    #
+    # See https://github.com/ecmwf/cdsapi/blob/master/cdsapi/api.py
+
+    client.retrieve(
+        dataset_name,
+        request,
+        output_path,
+    )

@@ -36,19 +36,28 @@ micromamba activate datapkg
 The data packages are produced using a
 [`snakemake`](https://snakemake.readthedocs.io/) workflow.
 
-The workflow expects `ZENODO_TOKEN` to be set as an environment variable - this
-must be set before running any workflow steps.
+The workflow expects `ZENODO_TOKEN`, `CDSAPI_KEY` and `CDSAPI_URL` to be set as
+environment variables - these must be set before running any workflow steps.
 
-If not interacting with Zenodo, this can be a dummy string:
+If not interacting with Zenodo or the Copernicus Climate Data Store, these can
+be dummy strings:
 
 ```bash
 echo "placeholder" > ZENODO_TOKEN
+echo "https://cds-beta.climate.copernicus.eu/api" > CDSAPI_URL
+echo "test" > CDSAPI_KEY
 ```
+
+See [Climate Data Store API
+docs](https://cds-beta.climate.copernicus.eu/how-to-api#use-the-cds-api-client-for-data-access)
+and [Zenodo API docs](https://developers.zenodo.org/#introduction) for access details.
 
 Export from the file to the environment:
 
 ```bash
 export ZENODO_TOKEN=$(cat ZENODO_TOKEN)
+export CDSAPI_KEY=$(cat CDSAPI_KEY)
+export CDSAPI_URL=$(cat CDSAPI_URL)
 ```
 
 Check what will be run, if we ask for everything produced by the rule `all`,

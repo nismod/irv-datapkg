@@ -6,14 +6,16 @@ data
 incoming_data
 zenodo
 *.qgz
+*.bak
 
 # Secrets
 *_TOKEN
+CDSAPI_*
 
 # Python
 __pycache__
 *.py[c,i]
 *.egg-info
 
-# Mac 
+# Mac
 ._*
