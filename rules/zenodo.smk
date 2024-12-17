@@ -54,6 +54,7 @@ rule deposit:
         touch("zenodo/{ISO3}.deposited"),
     run:
         params = {"access_token": os.environ["ZENODO_TOKEN"]}
+        headers = {'Authorization': f"Bearer {os.environ["ZENODO_TOKEN"]}"}
 
         with open(input.deposition, "r") as fh:
             deposition = json.load(fh)
@@ -71,14 +72,32 @@ rule deposit:
         log_deposition(wildcards.ISO3, deposition, deposition_id)
 
         if deposition["submitted"]:
-            r = requests.post(f'https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion', params=params)
+            # Request a new deposition to draft a new version
+
+            # NOTE: this seems to fail if there's already a draft - workaround is to search for the draft and discard it manually
+            # POST /api/deposit/depositions/:id/actions/newversion
+            r = requests.post(f'https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion', headers=headers)
             r.raise_for_status()
             response = r.json()
-            deposition_id = response["latest_draft"].split("/")[-1]
+
+            # Find draft deposition ID in response
+            deposition_id = response["links"]["latest_draft"].split("/")[-1]
             deposition = get_deposition(deposition_id)
             log_deposition(wildcards.ISO3, deposition, deposition_id)
             # NOTE overwriting an input file (should be okay, it's marked as ancient)
             write_deposition(input.deposition, deposition)
+
+            # List files
+            # GET /api/deposit/depositions/:id/files
+            r = requests.get(f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/files", headers=headers)
+            r.raise_for_status()
+            files = r.json()
+
+            # Delete each file
+            # DELETE /api/deposit/depositions/:id/files/:file_id
+            for file_ in files:
+                r = requests.delete(f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/files/{file_["id"]}", headers=headers)
+                r.raise_for_status()
 
         bucket_url = deposition["links"]["bucket"]
 
