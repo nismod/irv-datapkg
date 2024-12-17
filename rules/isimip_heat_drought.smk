@@ -59,7 +59,7 @@ checkpoint download_isimip:
         tiffs=directory("incoming_data/isimip_heat_drought"),
     shell:
         """
-        mkdir --parents incoming_data/isimip_heat_drought
+        mkdir -p incoming_data/isimip_heat_drought
         cd incoming_data/isimip_heat_drought
         zenodo_get 10.5281/zenodo.7732393
 

@@ -6,7 +6,7 @@ rule download_osm:
         pbf=protected("incoming_data/osm/planet-231106.osm.pbf"),
     shell:
         """
-        mkdir --parents incoming_data/osm
+        mkdir -p incoming_data/osm
         cd incoming_data/osm
         aws s3 sync --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/ . \
             --exclude '*' \

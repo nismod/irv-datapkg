@@ -6,7 +6,7 @@ rule download_powerplants:
         csv="incoming_data/wri_powerplants/global_power_plant_database.csv",
     shell:
         """
-        mkdir --parents incoming_data/wri_powerplants
+        mkdir -p incoming_data/wri_powerplants
         cd incoming_data/wri_powerplants
         wget https://wri-dataportal-prod.s3.amazonaws.com/manual/global_power_plant_database_v_1_3.zip
         unzip -o global_power_plant_database_v_1_3.zip

@@ -71,7 +71,7 @@ checkpoint download_aqueduct:
         tiffs=directory("incoming_data/aqueduct_flood"),
     shell:
         """
-        mkdir --parents incoming_data/aqueduct_flood
+        mkdir -p incoming_data/aqueduct_flood
         cd incoming_data/aqueduct_flood
         aws s3 sync --no-sign-request s3://wri-projects/AqueductFloodTool/download/v2/ . \
             --exclude '*' \
