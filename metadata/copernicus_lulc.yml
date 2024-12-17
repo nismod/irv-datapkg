@@ -1,21 +1,65 @@
 # yaml-language-server: $schema=irv-datapkg-schema.json
 name: copernicus_lulc
-description: Copernicus Land Cover
-version: x
+description: Copernicus Land Cover Classification
+version: v2.1.1
 dataset_name: copernicus_lulc
-data_author: x
-data_title: x
-data_title_long: x
+data_author: Copernicus Climate Change Service, Climate Data Store
+data_title: Copernicus Land Cover Classification
+data_title_long: Land cover classification gridded maps from 1992 to present derived from satellite observations
 data_summary: >
-  x
+  This dataset provides global maps describing the land surface into 22 classes,
+  which have been defined using the United Nations Food and Agriculture
+  Organization's (UN FAO) Land Cover Classification System (LCCS). In addition
+  to the land cover (LC) maps, four quality flags are produced to document the
+  reliability of the classification and change detection.
+
+  In order to ensure continuity, these land cover maps are consistent with the
+  series of global annual LC maps from the 1990s to 2015 produced by the
+  European Space Agency (ESA) Climate Change Initiative (CCI), which are also
+  available on the ESA CCI LC viewer.
+
+  To produce this dataset, the entire Medium Resolution Imaging Spectrometer
+  (MERIS) Full and Reduced Resolution archive from 2003 to 2012 was first
+  classified into a unique 10-year baseline LC map. This is then back- and
+  up-dated using change detected from (i) Advanced Very-High-Resolution
+  Radiometer (AVHRR) time series from 1992 to 1999, (ii) SPOT-Vegetation
+  (SPOT-VGT) time series from 1998 to 2012 and (iii) PROBA-Vegetation (PROBA-V)
+  and Sentinel-3 OLCI (S3 OLCI) time series from 2013.
+
+  Beyond the climate-modelling communities, this dataset's long-term
+  consistency, yearly updates, and high thematic detail on a global scale have
+  made it attractive for a multitude of applications such as land accounting,
+  forest monitoring and desertification, in addition to scientific research.
+
+  The products are made available to the public by ESA and the consortium. You
+  may use one or several CCI-LC products land cover map for educational and/or
+  scientific purposes, without any fee on the condition that you credit the ESA
+  Climate Change Initiative and in particular its Land Cover project as the
+  source of the CCI-LC database. Should you write any scientific publication on
+  the results of research activities that use one or several CCI-LC products as
+  input, you shall acknowledge the ESA CCI Land Cover project in the text of the
+  publication and provide the project with an electronic copy of the publication
+  (contact@esa-landcover-cci.org). If you wish to use one or several CCI-LC
+  products in advertising or in any commercial promotion, you shall acknowledge
+  the ESA CCI Land Cover project and you must submit the layout to the project
+  for approval beforehand (contact@esa-landcover-cci.org).
+
+  © ESA Climate Change Initiative - Land Cover led by UCLouvain (2017)
+
+  Generated using Copernicus Climate Change Service information [2024]. Neither
+  the European Commission nor ECMWF is responsible for any use that may be made
+  of the Copernicus information or data it contains.
 
 data_citation: >
-  x
+  Copernicus Climate Change Service, Climate Data Store, (2019): Land cover
+  classification gridded maps from 1992 to present derived from satellite
+  observation. Copernicus Climate Change Service (C3S) Climate Data Store (CDS).
+  DOI: 10.24381/cds.006f2c9a (Accessed on 09-AUG-2024)
 
 data_license:
-  name: x
-  title: x
-  path: x
+  name: ESA-CCI
+  title: ESA CCI Land Cover licence
+  path: https://object-store.os-api.cci2.ecmwf.int/cci2-prod-catalogue/licences/satellite-land-cover/satellite-land-cover_8423d13d3dfd95bbeca92d9355516f21de90d9b40083a915ead15a189d6120fa.pdf
 
-data_origin_url: x
+data_origin_url: https://cds-beta.climate.copernicus.eu/datasets/satellite-land-cover?tab=overview
 data_formats: ["GeoTIFF"]
