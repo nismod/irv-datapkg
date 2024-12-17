@@ -30,38 +30,39 @@ rule download_dem_glo90:
         mv {output.dir}.tmp {output.dir}
         """
 
-rule create_protected_dir:
+rule extract_dem_glo90:
+    input:
+        dir=rules.download_dem_glo90.output.dir,
     output:
-        dir=protected(directory("incoming_data/copernicus_dem/test")),
+        dir=directory("incoming_data/copernicus_dem/tiles"),
     shell:
         """
-        mkdir -p {output.dir}.tmp
-        pushd {output.dir}.tmp
+        pushd incoming_data/copernicus_dem
+            mkdir -p tiles
 
-        cat ../COP-DEM_GLO-90-DGED__2023_1.txt | parallel 'echo {{}} >> $(basename {{}})'
-
+            # Extract
+            find -type f -name '*.tar' | \
+                head | \
+                sed 's/.\\/archive\\///' | \
+                sed 's/.tar//' | \
+                parallel -j 1 \
+                    tar xvf \
+                        {{}}.tar \
+                        --skip-old-files \
+                        --strip-components=2 \
+                        -C ./tiles/ \
+                        {{}}/DEM/{{}}_DEM.tif
         popd
-        ln -s {output.dir}.tmp {output.dir}
         """
 
 rule convert_dem_glo90:
     input:
-        dir=rules.download_dem_glo90.output.dir,
+        dir=rules.extract_dem_glo90.output.dir,
     output:
         tiff="incoming_data/copernicus_dem/copernicus_dem.tif",
     shell:
         """
-        pushd {input.dir}/..
-            mkdir tiles
-
-            # Extract
-            find -type f -name '*.tar' | sed 's/\.\/archive\///'' | sed 's/.tar//' | parallel
-                tar xvf \
-                    archive/{{}}.tar \
-                    --strip-components=2 \
-                    -C tiles/ \
-                    {{}}/DEM/{{}}_DEM.tif
-
+        pushd incoming_data/copernicus_dem
             # Build list
             find -type f -name '*.tif' > tileList.txt
 
