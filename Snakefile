@@ -72,6 +72,7 @@ rule checksums:
         "data/{ISO3}/gridfinder/targets__{ISO3}.tif",
         "data/{ISO3}/isimip_heat_drought.csv",
         "data/{ISO3}/jrc_ghsl.csv",
+        "data/{ISO3}/jrc_floods.csv",
         "data/{ISO3}/openstreetmap/openstreetmap_rail__{ISO3}.gpkg",
         "data/{ISO3}/openstreetmap/openstreetmap_roads-tertiary__{ISO3}.gpkg",
         "data/{ISO3}/storm.csv",
