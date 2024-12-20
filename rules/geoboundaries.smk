@@ -64,3 +64,32 @@ rule download_geoboundaries_region:
         except KeyError:
             meta = pandas.DataFrame(columns=GEOBOUNDARIES_META.columns)
         meta.to_csv(output.csv)
+
+rule extract_zip:
+    input:
+        zip="incoming_data/geoboundaries/{ISO3}/geoBoundaries-{ADM_ISO3}-{ADM_LEVEL}-all.zip"
+    output:
+        gpkg="data/{ISO3}/geoboundaries/geoBoundaries-{ADM_ISO3}-{ADM_LEVEL}.gpkg",
+        txt="data/{ISO3}/geoboundaries/geoBoundaries-{ADM_ISO3}-{ADM_LEVEL}-metaData.txt"
+    shell:
+        """
+        extract_dir=incoming_data/geoboundaries/{wildcards.ISO3}/geoBoundaries-{wildcards.ADM_ISO3}-{wildcards.ADM_LEVEL}-all
+        unzip -n {input.zip} -d $extract_dir
+        ogr2ogr -f GPKG -nlt PROMOTE_TO_MULTI -overwrite {output.gpkg} $extract_dir/geoBoundaries-{wildcards.ADM_ISO3}-{wildcards.ADM_LEVEL}.shp
+        cp $extract_dir/geoBoundaries-{wildcards.ADM_ISO3}-{wildcards.ADM_LEVEL}-metaData.txt {output.txt}
+        """
+
+rule extract_geoboundaries_region:
+    input:
+        dirs=expand(
+            "data/{{ISO3}}/geoboundaries/geoBoundaries-{ADM_ISO3}-{ADM_LEVEL}.gpkg",
+            ADM_ISO3=lambda wildcards: boundary_adm0_a3(wildcards.ISO3),
+            ADM_LEVEL=lambda wildcards: geoboundaries_levels(wildcards.ISO3)
+        ),
+        csv="incoming_data/geoboundaries/geoboundaries__{ISO3}.csv"
+    output:
+        csv="data/{ISO3}/geoboundaries.csv"
+    shell:
+        """
+        cp {input.csv} {output.csv}
+        """

@@ -77,6 +77,7 @@ rule checksums:
     # - summary CSVs require multiple TIFFs in turn
     input:
         "data/{ISO3}/aqueduct_flood.csv",
+        "data/{ISO3}/geoboundaries.csv",
         "data/{ISO3}/gridfinder/grid__{ISO3}.gpkg",
         "data/{ISO3}/gridfinder/targets__{ISO3}.tif",
         "data/{ISO3}/isimip_heat_drought.csv",
