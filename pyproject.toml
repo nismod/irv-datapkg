@@ -1,6 +1,6 @@
 [project]
 name = "irv-datapkg"
-version = "0.1.2"
+version = "0.2.0-post1"
 authors = [
     { name = "Tom Russell", email = "tom.russell@ouce.ox.ac.uk" },
     { name = "Fred Thomas", email = "fred.thomas@eci.ox.ac.uk" }
