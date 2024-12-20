@@ -5,10 +5,10 @@ rule zip:
     input:
         "data/{ISO3}/datapackage.json",
     output:
-        "zenodo/{ISO3}.zip",
+        "zenodo_data/{ISO3}.zip",
     shell:
         """
-        zip -r zenodo/{wildcards.ISO3}.zip data/{wildcards.ISO3}
+        zip -r zenodo_data/{wildcards.ISO3}.zip data/{wildcards.ISO3}
         """
 
 
@@ -48,7 +48,7 @@ def write_deposition(fname, deposition):
 rule deposit:
     input:
         deposition=ancient("zenodo/{ISO3}.deposition.json"),
-        archive=ancient("zenodo/{ISO3}.zip"),
+        archive=ancient("zenodo_data/{ISO3}.zip"),
         datapackage=ancient("data/{ISO3}/datapackage.json"),
     output:
         touch("zenodo/{ISO3}.deposited"),
