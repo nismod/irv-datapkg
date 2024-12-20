@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: geoboundaries
+description: geoBoundaries
+version: "6.0.0"
+dataset_name: geoboundaries
+data_title: geoBoundaries
+data_title_long: "geoBoundaries: an open database of political administrative boundaries"
+data_author: Runfola D, Anderson A, Baier H, Crittenden M, Dowker E, Fuhrig S, et al.
+data_summary: >
+  The geoBoundaries Global Database of Political Administrative Boundaries,
+  built by the community and William & Mary geoLab, is an online, open license
+  (CC BY 4.0) resource of information on administrative boundaries (i.e., state,
+  county) for every country in the world. Since 2016, it has tracked
+  approximately 1 million boundaries within over 200 entities, including all UN
+  member states.
+
+  All boundaries are available to view or download in common file formats; the
+  only requirement for use is acknowledgement. When using geoBoundaries on the
+  web, put the name "geoBoundaries" with a link back to the website,
+  www.geoboundaries.org, somewhere prominent on the page that uses the
+  boundaries. This can be a stand-alone link or within a sentence. For written
+  works that use geoBoundaries in analysis, cite the PLoS One Publication
+  (Runfola et al., 2020).
+
+  Column Definitions:
+
+  - boundaryID - A unique ID created for every boundary in the geoBoundaries database by concatenating ISO 3166-1 3 letter country code, boundary level, geoBoundaries version, and an ID based on the geometry.
+  - boundaryISO -  The ISO 3166-1 3-letter country codes for each boundary.
+  - boundaryYear - The year(s) for which a boundary is representative. In cases where this is a range, the format is 'DATE-START TO DATE-END'.
+  - boundaryType - The type of boundary defined (i.e., ADM0 is equivalent to a country border; ADM1 a state.  Levels below ADM1 can vary in definition by country.)
+  - boundarySource - The name of the sources for the boundary definition used (with most boundaries having two identified sources).
+  - boundaryLicense - The specific license the data is released under.
+  - licenseDetail - Any details necessary for the interpretation or use of the license noted.
+  - licenseSource - A URL declaring the license under which a data product is made available.
+  - boundarySourceURL -  A URL from which source data was retrieved.
+  - sourceDataUpdateDate - A date encoded following ISO 8601 (Year-Month-Date) describing the last date this boundary was updated, for use in programmatic updating based on new releases.
+  - buildDate - The date the geoBoundary files were generated.
+  - downloadURL - A URL from which the geoBoundary can be downloaded.
+  - shapeID - The boundary ID, followed by the letter `B' and a unique integer for each shape which is a member of that boundary.
+  - shapeName - The identified name for a given shape.  '' if not identified.
+  - shapeGroup - The country or similar organizational group that a shape belongs to, in ISO 3166-1 where relevant.
+  - shapeType - The type of boundary represented by the shape.
+  - shapeISO - ISO codes for individual administrative districts, where available.  Where possible, these conform to ISO 3166-2, but this is not guaranteed in all cases. 'None' if not identified.
+  - boundaryCanonical - Canonical name(s) for the administrative hierarchy represented.  Present where available.
+
+  Issues associated with the geoBoundaries dataset are tracked publically, and
+  any individual can contribute comments through the github repository:
+  https://github.com/wmgeolab/geoBoundaries
+
+  Disclaimer:
+
+  With respect to the works on or made available through download from
+  www.geoboundaries.org, we make no representations or warranties—express,
+  implied, or statutory—as to the validity, accuracy, completeness, or fitness
+  for a particular purpose; nor represent that use of such works would not
+  infringe privately owned rights; nor assume any liability resulting from use
+  of such works; and shall in no way be liable for any costs, expenses, claims,
+  or demands arising out of use of such works.
+
+  Attribution is required for use of this product. Users using individual
+  boundary files from geoBoundaries should additionally ensure that they are
+  citing the sources provided in the metadata for each file.
+
+data_citation: >
+  Runfola D, Anderson A, Baier H, Crittenden M, Dowker E, Fuhrig S, et al. (2020)
+  geoBoundaries: A global database of political administrative boundaries.
+  PLoS ONE 15(4): e0231866. https://doi.org/10.1371/journal.pone.0231866.
+data_license:
+  name: CC-BY-4.0
+  title: Creative Commons Attribution 4.0
+  path: https://creativecommons.org/licenses/by/4.0/
+data_origin_url: https://www.geoboundaries.org/
+data_formats: ["zip"]

@@ -28,6 +28,15 @@ def boundary_geom(iso3):
     return BOUNDARY_LU.loc[iso3, "geometry"]
 
 
+def boundary_adm0_a3(iso3):
+    """Get the ADM0 A3 code corresponding to this boundary
+
+    In most cases this is a one-to-one mapping with no change, but where we have
+    some territories split into custom units (for example, Kiribati, East and
+    West of the antimeridian) this looks up the standard parent ADM0 A3 code.
+    """
+    return BOUNDARY_LU.loc[iso3, "ADM0_A3"]
+
 #
 # Top-level rules
 #
@@ -112,6 +121,9 @@ rule clip_geopackage:
         )
 
 include: "rules/aqueduct_flood.smk"
+include: "rules/copernicus_dem.smk"
+include: "rules/copernicus_lulc.smk"
+include: "rules/geoboundaries.smk"
 include: "rules/gridfinder.smk"
 include: "rules/isimip_heat_drought.smk"
 include: "rules/jrc_floods.smk"
@@ -119,6 +131,4 @@ include: "rules/jrc_ghsl.smk"
 include: "rules/openstreetmap.smk"
 include: "rules/storm.smk"
 include: "rules/wri_powerplants.smk"
-include: "rules/copernicus_lulc.smk"
-include: "rules/copernicus_dem.smk"
 include: "rules/zenodo.smk"
