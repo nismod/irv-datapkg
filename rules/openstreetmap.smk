@@ -3,24 +3,24 @@
 #
 rule download_osm:
     output:
-        pbf=protected("incoming_data/osm/planet-231106.osm.pbf"),
+        pbf=protected("incoming_data/osm/planet-250414.osm.pbf"),
     shell:
         """
         mkdir -p incoming_data/osm
         cd incoming_data/osm
-        aws s3 sync --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2023/ . \
+        aws s3 sync --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2025/ . \
             --exclude '*' \
-            --include planet-231106.osm.pbf \
-            --include planet-231106.osm.pbf.md5
-        md5sum --check planet-231106.osm.pbf.md5
+            --include planet-250414.osm.pbf \
+            --include planet-250414.osm.pbf.md5
+        md5sum --check planet-250414.osm.pbf.md5
         """
 
 
 rule filter_osm_data:
     input:
-        pbf="incoming_data/osm/planet-231106.osm.pbf",
+        pbf="incoming_data/osm/planet-250414.osm.pbf",
     output:
-        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf",
+        pbf="incoming_data/osm/planet-250414_{SECTOR}.osm.pbf",
     shell:
         """
         osmium tags-filter \
@@ -49,7 +49,7 @@ rule geojson_boundary:
 
 rule extract_osm_data:
     input:
-        pbf="incoming_data/osm/planet-231106_{SECTOR}.osm.pbf",
+        pbf="incoming_data/osm/planet-250414_{SECTOR}.osm.pbf",
         json="data/{ISO3}/boundary__{ISO3}.geojson",
     output:
         pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",

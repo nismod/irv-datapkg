@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=irv-datapkg-schema.json
 name: openstreetmap
 description: OpenStreetMap Road and Rail networks
-version: "231106"
+version: "250414"
 dataset_name: openstreetmap
 data_author: nismod/datapkg contributors and OpenStreetMap contributors
 data_title: OSM Road and Rail
@@ -22,7 +22,7 @@ data_summary: >
 
 data_citation: >
   Russell T., Thomas F., nismod/datapkg contributors and OpenStreetMap
-  contributors (2023) Road and Rail networks derived from OpenStreetMap.
+  contributors (2025) Road and Rail networks derived from OpenStreetMap.
   [Dataset] Available at https://global.infrastructureresilience.org
 
 data_license:

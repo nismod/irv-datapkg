@@ -10,7 +10,7 @@ import pandas
 import requests
 import shapely
 
-DATAPKG_VERSION = "0.2.0"
+DATAPKG_VERSION = "0.2.1"
 # ZENODO_URL = "sandbox.zenodo.org"
 ZENODO_URL = "zenodo.org"
 
