@@ -13,8 +13,8 @@ dependencies:
   - black # Python formatting
   - gdal>=3.3 # command-line tools for spatial data
   - geopandas>=1.0.1 # geospatial dataframes
-  - osmium-tool==1.16.0 # openstreetmap extracts
+  - osmium-tool # openstreetmap extracts
   - pyyaml # read YAML files
   - pyogrio # faster geospatial i/o
-  - bioconda::snakemake==8.25.5 # workflow management
+  - bioconda::snakemake # workflow management
   - bioconda::snakefmt # Snakefile formatting
