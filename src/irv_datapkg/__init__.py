@@ -78,7 +78,7 @@ def crop_raster(
     cmd = f"gdal_translate -projwin {ulx} {uly} {lrx} {lry} {fname} {out_fname}"
 
     if creation_options is None:
-        creation_options = ["COMPRESS=ZSTD"]
+        creation_options = ["COMPRESS=ZSTD", "BIGTIFF=IF_SAFER"]
 
     # Add Creation Options
     for creation_option in creation_options:
