@@ -7,6 +7,7 @@ publication of datasets.
 import csv
 import os
 import time
+from datetime import datetime
 from glob import glob
 
 import requests
@@ -46,9 +47,10 @@ if __name__ == "__main__":
                 break
 
             title = pub["title"]
+            year = datetime.fromisoformat(pub["updated"]).year
             doi = pub["doi"]
             version = pub["metadata"]["version"]
-            citation = f"Russell, T., Jaramillo, D., Nicholas, C., Thomas, F., Pant, R., & Hall, J. W. (2023). {title} ({version}) [Data set]. Zenodo. https://doi.org/{doi}"
+            citation = f"Russell, T., Jaramillo, D., Nicholas, C., Thomas, F., Pant, R., & Hall, J. W. ({year}). {title} ({version}) [Data set]. Zenodo. https://doi.org/{doi}"
             country = title.replace(
                 "Infrastructure Climate Resilience Assessment Data Starter Kit for ", ""
             )
