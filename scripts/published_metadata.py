@@ -30,6 +30,7 @@ if __name__ == "__main__":
             ("zenodo_deposition_id", "country", "title", "doi", "url", "citation")
         )
         for dep in tqdm(depositions, desc="Querying and writing"):
+            pub = None
             dep_id = dep["id"]
             retries = 0
             max_retry = 5
@@ -37,10 +38,11 @@ if __name__ == "__main__":
                 try:
                     r = requests.get(f"https://zenodo.org/api/records/{dep_id}")
                     if r.status_code != 200:
-                        print(r.status_code, r.text)
+                        print(dep_id, dep["fname"], r.status_code, r.text)
                         time.sleep(1)
                     r.raise_for_status()
                 except Exception:
+                    retries = retries + 1
                     continue
 
                 pub = r.json()
