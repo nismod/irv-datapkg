@@ -252,4 +252,14 @@ rule publish:
             f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/publish",
             params=params,
         )
+        time.sleep(0.5)
+
+        # get record, should be published now
+        r = requests.get(f"https://zenodo.org/api/records/{deposition_id}")
         r.raise_for_status()
+        record = r.json()
+
+        # log previous
+        log_deposition(wildcards.ISO3, deposition, deposition_id)
+        # write record as deposition
+        write_deposition(input.deposition, record)
