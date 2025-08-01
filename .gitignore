@@ -7,7 +7,9 @@ incoming_data
 zenodo
 *.qgz
 *.bak
+bak.*
 *.zip
+processors.json
 
 # Secrets
 *_TOKEN
@@ -17,6 +19,10 @@ CDSAPI_*
 __pycache__
 *.py[c,i]
 *.egg-info
+dist
 
 # Mac
 ._*
+
+# Hatch-VCS
+_version.py
