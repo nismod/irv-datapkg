@@ -7,6 +7,7 @@ publication of datasets.
 import csv
 import os
 import time
+from datetime import datetime
 from glob import glob
 
 import requests
@@ -29,6 +30,7 @@ if __name__ == "__main__":
             ("zenodo_deposition_id", "country", "title", "doi", "url", "citation")
         )
         for dep in tqdm(depositions, desc="Querying and writing"):
+            pub = None
             dep_id = dep["id"]
             retries = 0
             max_retry = 5
@@ -36,19 +38,21 @@ if __name__ == "__main__":
                 try:
                     r = requests.get(f"https://zenodo.org/api/records/{dep_id}")
                     if r.status_code != 200:
-                        print(r.status_code, r.text)
+                        print(dep_id, dep["fname"], r.status_code, r.text)
                         time.sleep(1)
                     r.raise_for_status()
                 except Exception:
+                    retries = retries + 1
                     continue
 
                 pub = r.json()
                 break
 
             title = pub["title"]
+            year = datetime.fromisoformat(pub["updated"]).year
             doi = pub["doi"]
             version = pub["metadata"]["version"]
-            citation = f"Russell, T., Jaramillo, D., Nicholas, C., Thomas, F., Pant, R., & Hall, J. W. (2023). {title} ({version}) [Data set]. Zenodo. https://doi.org/{doi}"
+            citation = f"Russell, T., Jaramillo, D., Nicholas, C., Thomas, F., Pant, R., & Hall, J. W. ({year}). {title} ({version}) [Data set]. Zenodo. https://doi.org/{doi}"
             country = title.replace(
                 "Infrastructure Climate Resilience Assessment Data Starter Kit for ", ""
             )
