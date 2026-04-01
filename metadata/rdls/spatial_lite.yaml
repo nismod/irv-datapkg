@@ -1,0 +1,107 @@
+# =============================================================================
+# Spatial Configuration (Lite) — Country Name Fixes Only
+# =============================================================================
+# Subset of spatial.yaml containing only the country_name_fixes needed
+# by the ICRA record generator. Region mappings are omitted.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Common country name fixes -> ISO3 code
+# Maps non-standard country names to their ISO 3166-1 alpha-3 codes.
+# Keys should be lowercase.
+# ---------------------------------------------------------------------------
+country_name_fixes:
+  # Standard variants
+  "cote d'ivoire": CIV
+  "ivory coast": CIV
+  "democratic republic of the congo": COD
+  "dr congo": COD
+  "republic of the congo": COG
+  "congo, rep.": COG
+  "congo, dem. rep.": COD
+  "lao pdr": LAO
+  "viet nam": VNM
+  "korea, rep.": KOR
+  "korea, dem. rep.": PRK
+  "syrian arab republic": SYR
+  "iran, islamic republic of": IRN
+  "tanzania, united republic of": TZA
+  "venezuela, bolivarian republic of": VEN
+  "bolivia, plurinational state of": BOL
+  "moldova, republic of": MDA
+  "palestine": PSE
+  "russia": RUS
+  "united states": USA
+  "united kingdom": GBR
+  "state of palestine": PSE
+  "republic of korea": KOR
+  "south korea": KOR
+  "holy see": VAT
+  "kosovo": XKX
+  "united states virgin islands": VIR
+  "sint maarten": SXM
+  "saint martin": MAF
+  "svalbard and jan mayen islands": SJM
+  "svalbard and jan mayen": SJM
+  "bonaire, sint eustatius and saba": BES
+  "bonaire; sint eustatius and saba": BES
+  "wallis and futuna islands": WLF
+  "wallis and futuna": WLF
+  "french southern and antarctic territories": ATF
+  "french southern territories": ATF
+  "saint helena": SHN
+  "eswatini": SWZ
+  "kingdom of eswatini": SWZ
+  "swaziland": SWZ
+  "north macedonia": MKD
+  "timor-leste": TLS
+  "east timor": TLS
+  "cabo verde": CPV
+  "cape verde": CPV
+  "micronesia": FSM
+  "micronesia (federated states of)": FSM
+  "brunei": BRN
+  "brunei darussalam": BRN
+  "turkiye": TUR
+  "czechia": CZE
+  "iraq": IRQ
+  "yemen": YEM
+  "syria": SYR
+  "iran": IRN
+  "venezuela": VEN
+  "bolivia": BOL
+  "tanzania": TZA
+  "moldova": MDA
+  "laos": LAO
+  "vietnam": VNM
+
+  # NISMOD ICRA split/non-standard territory names
+  "antigua": ATG
+  "barbuda": ATG
+  "the bahamas": BHS
+  "saint barthelemy": BLM
+  "bonaire": BES
+  "saint-eustatius": BES
+  "saba": BES
+  "canary islands": ESP
+  "galapagos islands": ECU
+  "falkland islands": FLK
+  "corsica": FRA
+  "fiji (east)": FJI
+  "fiji (west)": FJI
+  "chagos archipelago": IOT
+  "kiribati (east)": KIR
+  "kiribati (west)": KIR
+  "svalbard": SJM
+  "new zealand (islands)": NZL
+  "azores": PRT
+  "pitcairn islands": PCN
+  "spratly islands": VNM
+  "madeira": PRT
+  "reunion": REU
+  "somaliland": SOM
+  "sao tome and principe": STP
+  "são tomé and principe": STP
+  "são tomé and príncipe": STP
+  "turkey": TUR
+  "north pacific islands (usa)": UMI
