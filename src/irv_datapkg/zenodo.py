@@ -15,6 +15,33 @@ def get_deposition(deposition_id, zenodo_url):
     return deposition
 
 
+def get_draft_deposition(conceptrecid, zenodo_url):
+    headers = {"Authorization": f"Bearer {os.environ['ZENODO_TOKEN']}"}
+    page = 1
+    while True:
+        r = requests.get(
+            f"https://{zenodo_url}/api/deposit/depositions",
+            headers=headers,
+            params={"status": "draft", "page": page, "size": 100},
+        )
+        r.raise_for_status()
+        drafts = r.json()
+        draft = next(
+            (
+                item
+                for item in drafts
+                if not item["submitted"]
+                and str(item.get("conceptrecid")) == str(conceptrecid)
+            ),
+            None,
+        )
+        if draft is not None:
+            return draft
+        if len(drafts) < 100:
+            return None
+        page += 1
+
+
 def log_deposition(iso3, deposition, deposition_id):
     with open(
         f"zenodo/{iso3}.deposition.{deposition_id}.{datetime.now().isoformat()}.json",

@@ -78,6 +78,16 @@ snakemake --cores 8 --verbose all
 To publish, first [create a Zenodo token](https://zenodo.org/account/settings/applications/tokens/new/),
 save it and export it as the `ZENODO_TOKEN` environment variable.
 
+Workflow settings are in [`config.json`](./config.json): `datapkg_version` (the
+version recorded in uploaded packages) and `zenodo_url` (the Zenodo instance to
+use). To test against the sandbox instead of the live site, create a token on
+[sandbox.zenodo.org](https://sandbox.zenodo.org) and either edit `zenodo_url` to
+`sandbox.zenodo.org`, or override it for a single run:
+
+```bash
+snakemake --cores 1 --config zenodo_url=sandbox.zenodo.org zenodo/GBR.deposited
+```
+
 Upload a single data package:
 
 ```bash

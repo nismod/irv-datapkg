@@ -6,13 +6,22 @@ publication of datasets.
 
 import csv
 import os
-import time
 from datetime import datetime
 from glob import glob
 
 import requests
 import json
 from tqdm import tqdm
+
+from irv_datapkg.retry import retry
+
+
+@retry(max_attempts=5, exceptions=(requests.RequestException,), delay=1)
+def fetch_published_record(dep_id):
+    response = requests.get(f"https://zenodo.org/api/records/{dep_id}")
+    response.raise_for_status()
+    return response.json()
+
 
 if __name__ == "__main__":
     base_path = os.path.join(os.path.dirname(__file__), "..")
@@ -27,27 +36,20 @@ if __name__ == "__main__":
     with open(os.path.join(base_path, "records.csv"), "w") as fh:
         writer = csv.writer(fh)
         writer.writerow(
-            ("zenodo_deposition_id", "country", "title", "doi", "url", "citation")
+            (
+                "zenodo_deposition_id",
+                "country",
+                "title",
+                "doi",
+                "url",
+                "citation",
+                "version",
+                "iso3",
+            )
         )
         for dep in tqdm(depositions, desc="Querying and writing"):
-            pub = None
             dep_id = dep["id"]
-            retries = 0
-            max_retry = 5
-            while retries < max_retry:
-                try:
-                    r = requests.get(f"https://zenodo.org/api/records/{dep_id}")
-                    if r.status_code != 200:
-                        print(dep_id, dep["fname"], r.status_code, r.text)
-                        time.sleep(1)
-                    r.raise_for_status()
-                except Exception:
-                    retries = retries + 1
-                    continue
-
-                pub = r.json()
-                break
-
+            pub = fetch_published_record(dep_id)
             title = pub["title"]
             year = datetime.fromisoformat(pub["updated"]).year
             doi = pub["doi"]
@@ -57,5 +59,5 @@ if __name__ == "__main__":
                 "Infrastructure Climate Resilience Assessment Data Starter Kit for ", ""
             )
             url = f"https://zenodo.org/records/{dep_id}"
-            writer.writerow((dep_id, country, title, doi, url, citation))
-            time.sleep(0.5)  # respect rate-limit of ~120 per minute
+            iso3 = os.path.basename(dep["fname"]).split(".")[0]
+            writer.writerow((dep_id, country, title, doi, url, citation, version, iso3))

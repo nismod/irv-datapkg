@@ -3,7 +3,12 @@
 #
 import time
 
-from irv_datapkg.zenodo import get_deposition, log_deposition, write_deposition
+from irv_datapkg.zenodo import (
+    get_deposition,
+    get_draft_deposition,
+    log_deposition,
+    write_deposition,
+)
 
 
 rule zip:
@@ -65,16 +70,22 @@ rule deposit:
             # Request a new deposition to draft a new version
 
             # POST /api/deposit/depositions/:id/actions/newversion
-            # NOTE: this seems to fail if there's already a draft - workaround is to search for the draft and discard it manually
-            # could search all depositions for unsubmitted and discard?
-            # or could search for unsubmitted matching "conceptdoi" and use it?
-            r = requests.post(f'https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion', headers=headers)
-            r.raise_for_status()
-            response = r.json()
+            conceptrecid = deposition["conceptrecid"]
+            r = requests.post(
+                f"https://{ZENODO_URL}/api/deposit/depositions/{deposition_id}/actions/newversion",
+                headers=headers,
+            )
+            if r.status_code == 400:
+                draft = get_draft_deposition(conceptrecid, ZENODO_URL)
+                if draft is None:
+                    r.raise_for_status()
+                deposition_id = draft["id"]
+            else:
+                r.raise_for_status()
+                response = r.json()
+                deposition_id = response["links"]["latest_draft"].rsplit("/", 1)[-1]
 
-            # Find draft deposition ID in response
-            deposition_id = response["links"]["latest_draft"].split("/")[-1]
-            deposition = get_deposition(deposition_id)
+            deposition = get_deposition(deposition_id, ZENODO_URL)
             log_deposition(wildcards.ISO3, deposition, deposition_id)
             # NOTE overwriting an input file (should be okay, it's marked as ancient)
             write_deposition(input.deposition, deposition)
@@ -97,13 +108,33 @@ rule deposit:
         path = Path(input.archive)
         print("Uploading", path)
         with open(path, "rb") as fh:
-            r = requests.put(
-                f"{bucket_url}/{path.name}",
-                data=fh,
-                params=params,
-            )
-            print(r.json())
-            r.raise_for_status()
+            retryable_status_codes = {408, 429, 500, 502, 503, 504}
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                r = None
+                try:
+                    fh.seek(0)
+                    r = requests.put(
+                        f"{bucket_url}/{path.name}",
+                        data=fh,
+                        params=params,
+                    )
+                    r.raise_for_status()
+                except requests.RequestException as error:
+                    retryable = isinstance(
+                        error, (requests.ConnectionError, requests.Timeout)
+                    ) or (r is not None and r.status_code in retryable_status_codes)
+                    if not retryable or attempt == max_attempts - 1:
+                        raise
+                    delay = 2**attempt
+                    print(
+                        f"Upload failed; retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{max_attempts})"
+                    )
+                    time.sleep(delay)
+                else:
+                    print(r.json())
+                    break
 
         # Set up metadata
         centroid = boundary_geom(wildcards.ISO3).centroid
