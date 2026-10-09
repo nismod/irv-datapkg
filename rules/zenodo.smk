@@ -261,7 +261,11 @@ rule deposit:
             params=params,
             json=metadata,
         )
-        print(r.json())
+        if r.content:
+            try:
+                print(r.json())
+            except requests.exceptions.JSONDecodeError:
+                print(r.text)
         r.raise_for_status()
 
 

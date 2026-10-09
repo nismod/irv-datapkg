@@ -4,11 +4,30 @@ from datetime import datetime
 
 import requests
 
+from irv_datapkg.retry import retry
 
+
+def _is_retryable_zenodo_error(error):
+    if isinstance(error, (requests.ConnectionError, requests.Timeout)):
+        return True
+    return isinstance(error, requests.HTTPError) and error.response is not None and (
+        error.response.status_code in {408, 429, 500, 502, 503, 504}
+    )
+
+
+@retry(
+    max_attempts=6,
+    exceptions=(requests.RequestException,),
+    delay=5,
+    backoff=2,
+    retry_if=_is_retryable_zenodo_error,
+)
 def get_deposition(deposition_id, zenodo_url):
     params = {"access_token": os.environ["ZENODO_TOKEN"]}
     r = requests.get(
-        f"https://{zenodo_url}/api/deposit/depositions/{deposition_id}", params=params
+        f"https://{zenodo_url}/api/deposit/depositions/{deposition_id}",
+        params=params,
+        timeout=120,
     )
     r.raise_for_status()
     deposition = r.json()

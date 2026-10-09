@@ -14,6 +14,7 @@ def retry(
     exceptions: tuple[type[Exception], ...] = (Exception,),
     delay: float = 0,
     backoff: float = 1,
+    retry_if: Callable[[Exception], bool] | None = None,
 ) -> Callable[[F], F]:
     """Retry a function after selected exceptions.
 
@@ -34,7 +35,9 @@ def retry(
             for attempt in range(max_attempts):
                 try:
                     return function(*args, **kwargs)
-                except exceptions:
+                except exceptions as error:
+                    if retry_if is not None and not retry_if(error):
+                        raise
                     if attempt == max_attempts - 1:
                         raise
                     if wait:
