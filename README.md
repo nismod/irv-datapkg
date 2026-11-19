@@ -116,6 +116,15 @@ To generate [`records.csv`](./records.csv) with details of published packages:
 python scripts/published_metadata.py
 ```
 
+To record Zenodo view and download statistics for the published records:
+
+```bash
+python scripts/record_zenodo_view_download_stats.py
+```
+
+The script reads `records.csv` from the repository's `main` branch and writes
+the results to `stats.csv` in the current directory.
+
 ### Development Notes
 
 In case of warnings about `GDAL_DATA` not being set, try running:
