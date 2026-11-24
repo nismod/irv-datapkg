@@ -4,6 +4,12 @@
 
 - Item property filters compare numbers numerically, so `100`, `"100"` and
   `100.0` match each other.
+- Published analysis results (`docs/catalogue-spec.md` section 8): the
+  `results/open-gira/{run}/` contract. A run root is an ordinary catalogue root
+  (one collection per output layer, version = run id) with run metadata
+  (`irv:producer`, `irv:run`, `irv:commit`, `irv:config_hash`,
+  `irv:input_lock`). `validate` checks it against the new `results_run` schema;
+  lock files may pin a `run` instead of a `release`.
 
 ### Added: catalogue client and producer (`irv_datapkg.catalog`, WP1)
 

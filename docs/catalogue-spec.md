@@ -22,7 +22,8 @@ Everything lives under one base URI `{BASE}`: a local path, `file://`, `s3://`,
   {dataset}/{version}/{item}.json     # STAC item, one per file/variant
   {dataset}/{version}/{file}.tif|.parquet|.zarr
   extracts/{region}/{pkg_version}/    # T2 extracts (not yet produced)
-  results/open-gira/{run}/            # published analysis outputs (not yet produced)
+  results/open-gira/catalog.json      # index of published open-gira runs (section 8)
+  results/open-gira/{run}/            # one published open-gira run (section 8)
 {BASE}-private/                       # same layout, authenticated
   catalog.json
   {dataset}/collection.json ...
@@ -36,8 +37,8 @@ Everything lives under one base URI `{BASE}`: a local path, `file://`, `s3://`,
 - All hrefs inside documents are relative, so a catalogue can be copied or
   mirrored without rewriting. An asset file sits beside its item JSON
   (`"href": "./name.tif"`).
-- `partitions/`, `extracts/` and `results/` are reserved now; their content is
-  specified by later work packages.
+- `partitions/` and `extracts/` are reserved now; their content is specified by
+  later work packages. `results/` holds published analysis outputs (section 8).
 
 ## 2. Identifiers and versions
 
@@ -250,3 +251,132 @@ collection then records it:
 - Mark with `CatalogWriter.retire(dataset, version, note)` or
   `irv-datapkg retire BASE --mark DATASET=VERSION --note ...`. After a
   restore, `CatalogWriter.unretire` removes the entry.
+
+## 8. Published analysis results (`results/open-gira/{run}/`)
+
+Analysis outputs that other tools display (infra-risk-vis) are published by the
+producing workflow, not by irv-datapkg, under `{BASE}/results/{producer}/`. The
+only producer so far is open-gira. This replaces copying files by hand from the
+open-gira results directory.
+
+```
+{BASE}/results/open-gira/
+  catalog.json                        # index: one child link per run (mutable)
+  {run}/catalog.json                  # run root (immutable once published)
+  {run}/inputs/datapkg.lock.yaml      # the irv-datapkg lock the run used, if any
+  {run}/inputs/config.yaml            # the workflow config the run used
+  {run}/{layer}/collection.json       # one collection per output layer
+  {run}/{layer}/{run}/{item}.json     # one item per file
+  {run}/{layer}/{run}/{item}.parquet
+```
+
+**A run root is an ordinary catalogue root** (sections 1-4) with `{BASE}` =
+`{BASE}/results/open-gira/{run}`: a layer is a collection, and its only version
+is the run id. So `Catalog.open(run_root)`, `CatalogWriter`, `validate_catalog`
+and `publish` work on it unchanged; the version directory repeats the run id so
+that layout rule stays the same.
+
+### Run id
+
+`^[a-z0-9][a-z0-9.-]*-r[1-9][0-9]*$`, and it is the version of every layer
+in the run. Use `{YYYYMMDD}-{commit7}-r{N}` (date the outputs were made, the
+producer's short git commit) by default, e.g. `20261124-fc04e93-r1`, or a named
+run, e.g. `global-2022-r1`. Bump `-rN` when re-publishing outputs of the same
+date and commit that differ (e.g. after a config change).
+
+### Run root (`{run}/catalog.json`)
+
+A STAC Catalog with, in addition to `type`, `stac_version`, `id`, `links`
+(`child` per layer):
+
+| Field | Meaning |
+| --- | --- |
+| `irv:producer` | `open-gira` (the `results/` subdirectory) |
+| `irv:run` | The run id; MUST equal the directory name and every layer's only version |
+| `irv:commit` | Producer git commit (7-40 hex) that made the outputs |
+| `irv:dirty` | `true` if the producer's working tree had uncommitted changes. Publishing tools SHOULD refuse a dirty run unless told otherwise |
+| `irv:config_hash` | sha256 (64 hex) of the workflow config as canonical JSON (sorted keys, no whitespace) |
+| `irv:input_lock` | `{"href": "./inputs/datapkg.lock.yaml", "sha256": ..., "release": ..., "base": ...}`: the irv-datapkg lock the run read its inputs through, or `null` if it used none |
+| `irv:created` | When the run catalogue was written, `YYYY-MM-DDTHH:MM:SSZ` |
+
+`id` is `{producer}-{run}`. The files under `inputs/` are copied as they were
+used; `inputs/config.yaml` is what `irv:config_hash` was computed from.
+
+### Layers (collections)
+
+Layer ids follow the dataset id rule. Collection fields are as in section 3,
+with `irv:upstream_url` = the producer's repository URL, `irv:upstream_version`
+= `irv:commit`, `irv:versions` = `[run]`, `license`/`sci:citation` covering the
+inputs the layer derives from (e.g. GADM terms for boundaries), and
+`irv:access` = `public`. Private results are not specified yet.
+
+Layer ids that consumers rely on (open-gira, infra-risk-vis):
+
+| Layer | Content | `irv:dimensions` |
+| --- | --- | --- |
+| `road_edges_damages` | Road edges with direct damages per return period and EAD/EAEL, one hazard per item | `osm_extract`, `hazard`, `slice` |
+| `rail_edges_damages` | The same for rail | `osm_extract`, `hazard`, `slice` |
+| `rail_edges` | Rail network edges | `osm_extract` |
+| `rail_nodes` | Rail network nodes, including stations | `osm_extract` |
+| `nbs_opportunities` | Nature-based solution opportunity areas joined with avoided EAD | `osm_extract`, `nbs` |
+| `admin_boundaries` | Simplified admin boundaries | `admin_level` |
+| `hydrobasins_gadm` | HydroBASINS with GADM codes | `level` |
+
+- `osm_extract` is the open-gira OSM dataset (e.g. `planet-latest`); `hazard`
+  the open-gira hazard dataset key (e.g. `aqueduct-river`); `slice` the slice
+  number, or `null` for a file covering every slice.
+- Use `hazard`, `rcp`, `epoch` (section 4) as item properties when a file holds
+  one scenario. Files that hold many scenarios as columns keep the producer's
+  column names (open-gira: `hazard-{hazard file}_{statistic}_{EAD|EAEL|rp}`);
+  their scenario dimensions are not item properties.
+
+### Items and assets
+
+As section 4, plus:
+
+- `irv:source_path` (item property): the output's path relative to the
+  producer's results directory, e.g.
+  `direct_damages/planet-latest_filter-road/hazard-aqueduct-river/EAD_and_cost_per_RP/slice-5.geoparquet`.
+- Asset `irv:source_url` is `open-gira://results/{irv:source_path}`,
+  `irv:source_filename` its basename, `irv:retrieved` the run date and
+  `irv:commit` the producer commit (not an irv-datapkg commit).
+- Vector assets are **GeoParquet 1.1** in EPSG:4326 with a `bbox` covering
+  column (`geo` metadata `covering.bbox`), so readers can filter by bbox
+  without reading geometry. Rasters are COGs as in section 4.
+
+### Immutability and publishing
+
+- A published run is **immutable as a whole**, including its root catalogue
+  and collections. Re-publishing identical content is a no-op; anything else is
+  refused: publish a new run id instead.
+- `results/open-gira/catalog.json` is the only mutable document. It is a STAC
+  Catalog with a `child` link per run (`./{run}/catalog.json`, title = run id),
+  in the order published. It is not linked from `{BASE}/catalog.json` and no
+  release pins results.
+- Publish the run root with `irv_datapkg.publish.publish(local_run,
+  "{BASE}/results/open-gira/{run}", include_private=False)` (data, items,
+  collections, then the run root), and only then add the run to the index.
+
+### Consuming a run
+
+Open the run root: `Catalog.open("{BASE}/results/open-gira/{run}")`. Every
+layer's latest (only) version is the run. To pin checksums, a consumer MAY
+write a lock file (section 6) with `run: {run}` instead of `release`, and
+`base` = the run root; `Catalog.from_lock` reads it unchanged.
+
+```yaml
+lock_version: 1
+base: s3://example-bucket/irv-datapkg/results/open-gira/20261124-fc04e93-r1
+run: 20261124-fc04e93-r1
+datasets:
+  rail_edges:
+    version: 20261124-fc04e93-r1
+    access: public
+    items:
+      planet-latest:
+        data: {href: rail_edges/20261124-fc04e93-r1/planet-latest.parquet, sha256: ..., size: ...}
+```
+
+`validate` checks a run root against the `results_run` schema (`irv:run`
+matches the directory, every layer's `irv:versions` is `[run]`) when its
+`catalog.json` has `irv:run`.

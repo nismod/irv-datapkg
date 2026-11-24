@@ -18,7 +18,8 @@ def schema() -> dict:
 
 
 def check(doc: dict, kind: str) -> list:
-    """Schema errors for ``doc`` validated as ``kind`` (collection, item, release, lock)."""
+    """Schema errors for ``doc`` validated as ``kind`` (collection, item, release,
+    lock, results_run)."""
     full = schema()
     validator = jsonschema.Draft202012Validator({"$ref": f"#/$defs/{kind}", "$defs": full["$defs"]})
     return [
@@ -86,6 +87,8 @@ def validate_catalog(
                     )
 
     public_root = _fs.join(base, "catalog.json")
+    if _fs.exists(public_root, so):
+        _validate_results_run(_fs.read_json(public_root, so), public_root, collections, err, errors)
     release_links = (
         _fs.read_json(public_root, so).get("links", []) if _fs.exists(public_root, so) else []
     )
@@ -109,6 +112,19 @@ def validate_catalog(
             elif pin.get("access") != coll.get("irv:access"):
                 err(rel_url, f"access of {dataset} does not match its collection")
     return errors
+
+
+def _validate_results_run(root_doc, root_url, collections, err, errors):
+    """A results run root (``irv:run`` in its catalog.json, spec section 8)."""
+    if "irv:run" not in root_doc:
+        return
+    errors.extend(f"{root_url}: {e}" for e in check(root_doc, "results_run"))
+    run = root_doc.get("irv:run")
+    if run != _dirname(root_url):
+        err(root_url, f"irv:run {run!r} does not match its directory")
+    for dataset, coll in collections.items():
+        if coll.get("irv:versions") != [run]:
+            err(root_url, f"layer {dataset} has versions {coll.get('irv:versions')}, expected [{run!r}]")
 
 
 def _validate_item(coll, item_url, check_files, so, err, errors):

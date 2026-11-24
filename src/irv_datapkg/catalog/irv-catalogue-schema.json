@@ -2,10 +2,36 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/nismod/irv-datapkg/blob/main/src/irv_datapkg/catalog/irv-catalogue-schema.json",
   "title": "irv-datapkg catalogue fields",
-  "description": "irv-specific requirements layered on STAC 1.0 documents. See docs/catalogue-spec.md. Validate a document against one of the $defs: collection, item, release, lock.",
+  "description": "irv-specific requirements layered on STAC 1.0 documents. See docs/catalogue-spec.md. Validate a document against one of the $defs: collection, item, release, lock, results_run.",
   "$defs": {
     "dataset_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
     "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*-r[1-9][0-9]*$"},
+    "run_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*-r[1-9][0-9]*$"},
+    "results_run": {
+      "type": "object",
+      "description": "Root catalog.json of a published results run, {BASE}/results/{producer}/{run}/ (spec section 8)",
+      "required": ["type", "stac_version", "id", "links", "irv:producer", "irv:run", "irv:commit",
+                   "irv:config_hash", "irv:input_lock", "irv:created"],
+      "properties": {
+        "type": {"const": "Catalog"},
+        "irv:producer": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "irv:run": {"$ref": "#/$defs/run_id"},
+        "irv:commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "irv:dirty": {"type": "boolean"},
+        "irv:config_hash": {"$ref": "#/$defs/sha256"},
+        "irv:created": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "irv:input_lock": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "object", "required": ["href", "sha256"],
+             "properties": {"href": {"type": "string", "pattern": "^\\./"},
+                            "sha256": {"$ref": "#/$defs/sha256"},
+                            "release": {"type": ["string", "null"]},
+                            "base": {"type": ["string", "null"]}}}
+          ]
+        }
+      }
+    },
     "release_name": {"type": "string", "pattern": "^[0-9]{4}\\.[1-9][0-9]*$"},
     "access": {"enum": ["public", "private"]},
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -112,9 +138,15 @@
     },
     "lock": {
       "type": "object",
-      "required": ["lock_version", "base", "release", "datasets"],
+      "required": ["lock_version", "base", "datasets"],
+      "oneOf": [
+        {"required": ["release"], "not": {"required": ["run"]}},
+        {"required": ["run"], "not": {"required": ["release"]},
+         "description": "a lock on one published results run (spec section 8)"}
+      ],
       "properties": {
         "lock_version": {"const": 1},
+        "run": {"$ref": "#/$defs/run_id"},
         "base": {"type": "string", "minLength": 1,
                  "description": "as given: URL, absolute path, or path relative to the lock file"},
         "private_base": {"type": "string", "minLength": 1},
