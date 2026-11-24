@@ -60,6 +60,19 @@ export CDSAPI_KEY=$(cat CDSAPI_KEY)
 export CDSAPI_URL=$(cat CDSAPI_URL)
 ```
 
+The workflow builds each dataset in tiers: a T0 raw mirror with provenance, T1
+analysis-ready global layers (COG / GeoParquet) registered in a local STAC
+catalogue, and T2 country extracts (the Zenodo packages). Paths come from
+[`config.json`](./config.json): `workspace_dir` (default `workspace`), and
+`raw_dir`, `build_dir` and `catalogue_base` under it. See
+[`docs/recipes.md`](docs/recipes.md) for the layout, the targets (`all_t1`,
+`all_t1_{dataset}`) and how to add a dataset. On the production machine, point
+the workspace at the mounted drive:
+
+```bash
+snakemake --cores 8 --config workspace_dir=/path/to/workspace all_t1
+```
+
 Check what will be run, if we ask for everything produced by the rule `all`,
 before running the workflow for real:
 

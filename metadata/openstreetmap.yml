@@ -32,3 +32,23 @@ data_license:
 
 data_origin_url: https://global.infrastructureresilience.org
 data_formats: ["GeoPackage"]
+
+collections:
+  - id: openstreetmap
+    version: planet-250414-r1
+    upstream_url: s3://osm-planet-eu-central-1/planet/pbf/
+    upstream_version: planet-250414
+    license: ODbL-1.0
+    access: public
+    dimensions: [sector, layer]
+    keywords: [openstreetmap, roads, rail, transport]
+    processing:
+      - download the pinned planet PBF and check its md5 (aws s3 sync)
+      - filter by sector tags with osmium tags-filter (config/{sector}.txt)
+      - convert each OGR OSM layer to GeoParquet 1.1 with ogr2ogr (config/{sector}.conf.ini; EPSG:4326, bbox covering column, sorted by bbox)
+
+t2:
+  enabled: true
+  stem: "openstreetmap_{sector}"
+  layer: "{layer}"
+  clip: geometry

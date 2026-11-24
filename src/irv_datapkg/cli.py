@@ -1,5 +1,6 @@
 """``irv-datapkg`` command line: fetch, lock, validate, extract, release,
-publish, retire, linkcheck."""
+publish, retire, linkcheck, plus producer helpers for shell rules in recipes
+(provenance, to-cog)."""
 
 import json
 import sys
@@ -475,6 +476,83 @@ def linkcheck(base, private_base, datasets_csv, output, timeout, fail_on_error):
     )
     if failed and fail_on_error:
         sys.exit(1)
+
+
+@main.command()
+@click.argument("files", nargs=-1, required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--output",
+    "-o",
+    required=True,
+    help="Sidecar to write (<file>.provenance.json or <dir>/provenance.json).",
+)
+@click.option(
+    "--tool", required=True, help="Download tool, e.g. 'aws s3 sync' (its version is recorded)."
+)
+@click.option(
+    "--url-prefix", default=None, help="Upstream URL = prefix + path relative to the sidecar."
+)
+@click.option("--source-url", default=None, help="One upstream URL (or request) for all files.")
+@click.option(
+    "--urls-from",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="File listing upstream URLs, one per line, matched to FILES by file name.",
+)
+@click.option("--source", default=None, help="Free-text description of the upstream.")
+@click.option("--retrieved", default=None, help="Retrieval date YYYY-MM-DD (default today).")
+def provenance(files, output, tool, url_prefix, source_url, urls_from, source, retrieved):
+    """Write a T0 provenance sidecar (source URL, sha256, size, date, tool) for FILES."""
+    from .recipes.provenance import tool_version, write_provenance
+
+    urls = {}
+    if urls_from:
+        with open(urls_from) as fh:
+            for line in fh:
+                url = line.strip()
+                if url:
+                    urls[url.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]] = url
+    exe = tool.split()[0]
+    label = tool_version(exe)
+    if tool.split()[1:]:
+        label = f"{label} ({tool})"
+    click.echo(
+        write_provenance(
+            output,
+            files,
+            tool=label,
+            url_prefix=url_prefix,
+            source_url=source_url,
+            urls=urls,
+            source=source,
+            retrieved=retrieved,
+        )
+    )
+
+
+@main.command("to-cog")
+@click.argument("src")
+@click.argument("dst", type=click.Path(dir_okay=False))
+@click.option("--nodata", type=float, default=None, help="Assign nodata (no value change).")
+@click.option("--crs", default=None, help="Assign CRS (no reprojection).")
+@click.option("--units", default=None, help="Band unit.")
+@click.option("--compress", default="ZSTD", type=click.Choice(["ZSTD", "DEFLATE"]))
+@click.option("--resampling", default="nearest", help="Overview resampling.")
+def to_cog_cmd(src, dst, nodata, crs, units, compress, resampling):
+    """Convert SRC (any GDAL raster) to a COG on the source grid (ADR 0004)."""
+    from .recipes.formats import to_cog
+
+    click.echo(
+        to_cog(
+            src,
+            dst,
+            nodata=nodata,
+            crs=crs,
+            units=units,
+            compress=compress,
+            overview_resampling=resampling,
+        )
+    )
 
 
 if __name__ == "__main__":

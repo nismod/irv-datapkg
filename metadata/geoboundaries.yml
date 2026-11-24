@@ -71,3 +71,25 @@ data_license:
   path: https://creativecommons.org/licenses/by/4.0/
 data_origin_url: https://www.geoboundaries.org/
 data_formats: ["zip"]
+
+collections:
+  - id: boundaries_geoboundaries
+    version: 6.0.0-r1
+    upstream_url: https://www.geoboundaries.org/api/current/gbOpen/
+    upstream_version: 6.0.0 (gbOpen, release commit 9469f09)
+    license: CC-BY-4.0
+    access: public
+    dimensions: [iso3, adm_level]
+    keywords: [boundaries, administrative]
+    processing:
+      - download each country/admin-level zip listed in bundled_data/geoboundaries.csv
+      - convert the shapefile in each zip to GeoParquet 1.1 (EPSG:4326, bbox covering column, Hilbert-sorted)
+      - per-boundary licence, source and year from the geoBoundaries metadata recorded as item properties
+
+t2:
+  enabled: true
+  filter: {iso3: "{ADM0_A3}"}
+  stem: "geoBoundaries-{iso3}-{adm_level}"
+  clip: none
+  summary: true
+  summary_columns: [iso3, adm_level, boundary_year, boundary_source, boundary_license]

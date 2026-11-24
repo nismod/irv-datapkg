@@ -1,19 +1,19 @@
-"""Generate datapackage.json for full dataset
+"""Generate datapackage.json for a T2 country package
 
-Run as the final data-generation step in the Snakemake workflow.
+Run as the final data-generation step in the Snakemake workflow. Resources are
+the metadata/*.yml files with t2.enabled; files are grouped by their directory
+under data/{ISO3}/ (the package resource name).
 """
 
 from collections import defaultdict
 import json
 from operator import itemgetter
 import sys
-from glob import glob
 from pathlib import Path
 
 import geopandas
-import yaml
-
 import irv_datapkg
+from irv_datapkg.recipes import load_metadata
 
 
 def package(
@@ -49,7 +49,10 @@ def resources(iso3: str, metadata: list[dict], checksums: dict[list]) -> list[di
     for meta in metadata:  # read from YAML
         name = meta["name"]
         sorted_filemeta = sorted(checksums[name], key=itemgetter(0))
-        assert len(sorted_filemeta), f"No file metadata found for {name}"
+        if not sorted_filemeta:
+            # e.g. no geoBoundaries for this country
+            print(f"No files for {name} in {iso3}: resource left out", file=sys.stderr)
+            continue
         paths, hashes, bytes = zip(*sorted_filemeta)
         resources.append(
             {
@@ -67,18 +70,20 @@ def resources(iso3: str, metadata: list[dict], checksums: dict[list]) -> list[di
                         "path": meta["data_origin_url"],
                     }
                 ],
+                # T1 catalogue collections the files were extracted from
+                "irv_catalogue": [
+                    {"id": c["id"], "version": c["version"]}
+                    for c in meta.get("collections", [])
+                ],
             }
         )
     return resources
 
 
 def read_metadata(base_path: Path) -> list[dict]:
-    fnames: list[str] = glob(str(base_path / "metadata" / "*.yml"))
-    metadata: list[dict] = []
-    for fname in fnames:
-        with open(fname, "r") as fh:
-            metadata.append(yaml.safe_load(fh))
-    return metadata
+    """Metadata of every package resource in the T2 country packages (t2.enabled)."""
+    packages = load_metadata(base_path / "metadata")
+    return [pkg.raw for pkg in packages.values() if pkg.in_t2]
 
 
 def read_checksums(package_path: Path) -> dict[str, list]:

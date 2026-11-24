@@ -44,3 +44,21 @@ data_license:
 
 data_origin_url: https://doi.org/10.5281/zenodo.3628142
 data_formats: ["GeoPackage", "GeoTIFF"]
+
+collections:
+  - id: gridfinder
+    version: 1.1.1-r1
+    upstream_url: Zenodo 10.5281/zenodo.3628142
+    upstream_version: 1.1.1
+    license: CC-BY-4.0
+    access: public
+    dimensions: [layer]
+    keywords: [electricity, power grid]
+    processing:
+      - download the Zenodo record (zenodo_get)
+      - convert grid.gpkg to GeoParquet 1.1 (EPSG:4326, bbox covering column, Hilbert-sorted)
+      - convert targets.tif and lv.tif to COGs (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+t2:
+  enabled: true
+  items: [grid, targets]

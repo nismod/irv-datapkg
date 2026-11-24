@@ -70,3 +70,26 @@ data_license:
 
 data_origin_url: https://doi.org/10.5281/zenodo.7438145
 data_formats: ["GeoTIFF"]
+
+collections:
+  - id: storm_fixed_rp
+    version: 1.0.0-r1
+    upstream_url: Zenodo 10.5281/zenodo.10931452
+    upstream_version: 1.0.0
+    doi: 10.5281/zenodo.7438145
+    license: CC0-1.0
+    access: public
+    units: m/s
+    dimensions: [hazard, rcp, epoch, gcm, return_period]
+    keywords: [tropical cyclone, wind, hazard]
+    processing:
+      - download the Zenodo record files and check md5 sums (zenodo_get, wget)
+      - extract the global mosaics from STORM_FIXED_RETURN_PERIODS.zip
+      - convert each mosaic to a COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+t2:
+  enabled: true
+  stem: "{upstream_name}"
+  summary: true
+  summary_columns: [hazard, epoch, rcp, gcm, return_period]
+  baseline_epoch: 2010

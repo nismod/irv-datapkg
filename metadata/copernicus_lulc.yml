@@ -63,3 +63,23 @@ data_license:
 
 data_origin_url: https://cds-beta.climate.copernicus.eu/datasets/satellite-land-cover?tab=overview
 data_formats: ["GeoTIFF"]
+
+collections:
+  - id: copernicus_lulc
+    version: v2.1.1-r1
+    upstream_url: Copernicus CDS satellite-land-cover (variable all, year 2022, version v2_1_1)
+    upstream_version: v2.1.1
+    license: other
+    access: public
+    units: null
+    nodata: 0
+    dimensions: [year]
+    keywords: [land cover, lccs]
+    processing:
+      - request the 2022 map from the Copernicus CDS API (satellite-land-cover, tgz)
+      - extract the NetCDF from the archive
+      - convert variable lccs_class to a COG (ZSTD + predictor, 512 px tiles, nearest overviews), source grid kept, CRS assigned EPSG:4326
+
+t2:
+  enabled: true
+  stem: copernicus_lulc

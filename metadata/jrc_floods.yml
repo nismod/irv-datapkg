@@ -38,3 +38,24 @@ data_license:
 
 data_origin_url: https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp50y-tif
 data_formats: ["GeoTIFF"]
+
+collections:
+  - id: jrc_flood_globalmaps
+    version: 20240320-r1
+    upstream_url: https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/FLOODS/GlobalMaps/
+    upstream_version: unversioned (published 2024-03-20)
+    license: CC-BY-4.0
+    access: public
+    units: m
+    dimensions: [hazard, return_period]
+    keywords: [flood, hazard, inundation]
+    processing:
+      - download one zip per return period
+      - extract the GeoTIFF from each zip
+      - convert to COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+t2:
+  enabled: true
+  stem: "{upstream_name}"
+  summary: true
+  summary_columns: {rp: return_period}

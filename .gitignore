@@ -27,3 +27,6 @@ dist
 # Hatch-VCS
 _version.py
 .venv
+
+# Workspace (T0 raw, builds, local T1 catalogue)
+workspace

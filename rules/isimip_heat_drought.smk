@@ -1,70 +1,98 @@
-
 #
-# Extreme heat/drought
+# ISIMIP extreme heat and drought annual expected occurrence
 #
-def summarise_isimip_input(wildcards):
-    # should be the directory "incoming_data/isimip_heat_drought"
-    checkpoint_output = checkpoints.download_isimip.get(**wildcards).output.tiffs
-
-    # should be a list of filename slugs (stripped of .tif extension)
-    slugs = glob_wildcards(os.path.join(checkpoint_output, "{SLUG}.tif")).SLUG
-
-    # should match ISO3 to "JAM" or whichever country code is requested in summary
-    # and return a full list of file paths under "data/JAM/isimip_heat_drought/*.tif"
-    return expand(
-        "data/{ISO3}/isimip_heat_drought/{SLUG}__{ISO3}.tif",
-        ISO3=wildcards.ISO3,
-        SLUG=slugs,
-    )
+# Collection: isimip_heat_drought (metadata/isimip_heat_drought.yml)
+#
+# Items are listed from the zip downloaded by the T0 checkpoint: dry runs stop at
+# isimip_heat_drought_t0.
+#
+ISIMIP_RAW = raw_dir("isimip_heat_drought")
+ISIMIP_ZENODO = "7732393"
+ISIMIP_RE = (
+    r"lange2020_(?P<model>[^_]+)_(?P<gcm>[^_]+)_ewembi_(?P<rcp>[^_]+)_(?P<soc>[^_]+)"
+    r"_(?P<co2>[^_]+)_(?P<variable>[^_]+)_global_annual_\d+_\d+_(?P<epoch>[^_]+)_occurrence$"
+)
+ISIMIP_HAZARDS = {"leh": "extreme_heat", "led": "drought"}
 
 
-rule summarise_isimip:
-    input:
-        summarise_isimip_input,
+def isimip_heat_drought_properties(name):
+    """Variant properties from an upstream file name (without .tif), or None.
+
+    e.g. lange2020_hwmid-humidex_gfdl-esm2m_ewembi_rcp26_nosoc_co2_leh_global_annual_2006_2099_2030_occurrence
+    """
+    import re
+
+    m = re.match(ISIMIP_RE, name)
+    if m is None or m["variable"] not in ISIMIP_HAZARDS:
+        return None
+    rcp = m["rcp"]
+    if rcp.startswith("rcp") and rcp[3:].isdigit():
+        rcp = f"{rcp[3]}.{rcp[4:]}"  # rcp26 -> 2.6, rcp60 -> 6.0
+    epoch = m["epoch"]
+    return {
+        "hazard": ISIMIP_HAZARDS[m["variable"]],
+        "rcp": rcp,
+        "epoch": int(epoch) if epoch.isdigit() else epoch,
+        "gcm": m["gcm"],
+        "model": m["model"],
+        "upstream_name": name,
+    }
+
+
+checkpoint isimip_heat_drought_t0:
+    """T0: the Zenodo record (occurrence and exposure archives)"""
     output:
-        csv="data/{ISO3}/isimip_heat_drought.csv",
-    run:
-        paths = glob(f"data/{wildcards.ISO3}/isimip_heat_drought/*.tif")
-        summary = pandas.DataFrame({"path": paths})
-        # lange2020_hwmid-humidex_gfdl-esm2m_ewembi_rcp26_nosoc_co2_leh_global_annual_2006_2099_2030_occurrence.tif
-        meta = summary.path.str.extract(
-            r"lange2020_(?P<model>[^_]+)_(?P<gcm>[^_]+)_ewembi_(?P<rcp>[^_]+)_(?P<soc>[^_]+)_(?P<co2>[^_]+)_(?P<variable>[^_]+)_global_annual_\d+_\d+_(?P<epoch>[^_]+)"
-        )
-
-
-        def map_var(var):
-            if var == "leh":
-                return "extreme_heat"
-            elif var == "led":
-                return "drought"
-            else:
-                return "na"
-
-
-        meta["hazard"] = meta.variable.apply(map_var)
-        meta.drop(columns=["soc", "co2", "variable"], inplace=True)
-        meta["path"] = summary.path
-        meta.rcp = meta.rcp.str.replace("rcp26", "2.6").str.replace("rcp60", "6.0")
-        meta.epoch = meta.epoch.str.replace("baseline", "2010")
-
-
-        columns = ["hazard", "epoch", "rcp", "gcm", "model", "path"]
-        meta = meta[columns].sort_values(by=columns)
-
-        meta.to_csv(output.csv, index=False)
-
-
-checkpoint download_isimip:
-    output:
-        tiffs=directory("incoming_data/isimip_heat_drought"),
+        zip=f"{ISIMIP_RAW}/lange2020_expected_occurrence.zip",
+        provenance=f"{ISIMIP_RAW}/provenance.json",
+    params:
+        doi=f"10.5281/zenodo.{ISIMIP_ZENODO}",
+        provenance=provenance_cmd(
+            "provenance.json",
+            "$(sed 's#?.*##; s#.*/##' links.txt)",
+            "zenodo_get",
+            url_prefix=f"https://zenodo.org/records/{ISIMIP_ZENODO}/files",
+        ),
     shell:
         """
-        mkdir -p incoming_data/isimip_heat_drought
-        cd incoming_data/isimip_heat_drought
-        zenodo_get 10.5281/zenodo.7732393
-
-        # pick out occurrence files (ignore exposure)
-        unzip lange2020_expected_occurrence.zip -d .
-        mv lange2020_expected_occurrence/*_occurrence.tif .
-        rm -r lange2020_expected_occurrence
+        mkdir -p $(dirname {output.zip})
+        cd $(dirname {output.zip})
+        zenodo_get -w links.txt {params.doi}
+        wget -nc -i links.txt
+        {params.provenance}
         """
+
+
+@lru_cache(maxsize=None)
+def isimip_heat_drought_items():
+    archive = checkpoints.isimip_heat_drought_t0.get().output.zip
+    items = {}
+    for member in recipes.archive_members(archive, "_occurrence.tif"):
+        name = recipes.formats.posix_basename(member)[: -len(".tif")]
+        props = isimip_heat_drought_properties(name)
+        if props is None:
+            print(f"isimip_heat_drought: skipping unrecognised file {member}")
+            continue
+        items[name.lower()] = T1Item(
+            ext="tif", properties=props, sources=[archive], extra={"member": member}
+        )
+    return items
+
+
+register_t1("isimip_heat_drought", isimip_heat_drought_items)
+
+
+rule isimip_heat_drought_t1:
+    """T1: COG of each occurrence GeoTIFF, read straight from the zip"""
+    input:
+        zip=f"{ISIMIP_RAW}/lange2020_expected_occurrence.zip",
+    output:
+        tif=f"{t1_dir('isimip_heat_drought')}/{{item}}.tif",
+    wildcard_constraints:
+        item="lange2020_[a-z0-9_.-]+_occurrence",
+    run:
+        member = t1_item("isimip_heat_drought", wildcards.item).extra["member"]
+        recipes.to_cog(
+            recipes.vsizip(input.zip, member),
+            output.tif,
+            descriptions="annual expected occurrence (fraction)",
+        )

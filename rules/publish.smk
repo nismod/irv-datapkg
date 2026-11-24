@@ -24,11 +24,18 @@
 import datetime as _dt
 import os as _os
 
-PUBLISH_WORKSPACE = config.get("workspace_dir", ".")
-PUBLISH_BASE = config.get(
-    "catalogue_base", _os.path.join(PUBLISH_WORKSPACE, "catalogue", "irv-datapkg")
+# Resolved workspace paths come from rules/common.smk when it is included first;
+# fall back to the raw config keys when this file is used on its own.
+PUBLISH_WORKSPACE = globals().get("WORKSPACE", config.get("workspace_dir", "."))
+PUBLISH_BASE = globals().get(
+    "CATALOGUE",
+    config.get(
+        "catalogue_base", _os.path.join(PUBLISH_WORKSPACE, "catalogue", "irv-datapkg")
+    ),
 )
-PUBLISH_PRIVATE_BASE = config.get("catalogue_private_base", PUBLISH_BASE.rstrip("/") + "-private")
+PUBLISH_PRIVATE_BASE = config.get(
+    "catalogue_private_base", PUBLISH_BASE.rstrip("/") + "-private"
+)
 PUBLISH_REMOTE = config.get("publish_remote")
 PUBLISH_PRIVATE_REMOTE = config.get("publish_private_remote")
 PUBLISH_PRIVATE = bool(config.get("publish_private", True))
@@ -78,7 +85,9 @@ def _stamp():
 rule catalogue_publish_dry_run:
     """Validate the local catalogue and report what a publish would upload."""
     run:
-        _publish(True, _os.path.join(PUBLISH_REPORTS, f"publish-dry-run-{_stamp()}.json"))
+        _publish(
+            True, _os.path.join(PUBLISH_REPORTS, f"publish-dry-run-{_stamp()}.json")
+        )
 
 
 rule catalogue_publish:
@@ -94,7 +103,9 @@ rule catalogue_release:
 
         name = _release_name(config.get("release"))
         if not name:
-            raise ValueError("Give --config release=YYYY.N [release_from=...] [release_pins=a=v,...]")
+            raise ValueError(
+                "Give --config release=YYYY.N [release_from=...] [release_pins=a=v,...]"
+            )
         pins = config.get("release_pins") or {}
         if isinstance(pins, str):
             pins = dict(p.split("=", 1) for p in pins.split(",") if p)
@@ -117,9 +128,13 @@ rule catalogue_retire_report:
 
         _os.makedirs(PUBLISH_REPORTS, exist_ok=True)
         rows = retire_report(PUBLISH_BASE, private_base=PUBLISH_PRIVATE_BASE)
-        out = _os.path.join(PUBLISH_REPORTS, f"retire-{_dt.date.today().isoformat()}.csv")
+        out = _os.path.join(
+            PUBLISH_REPORTS, f"retire-{_dt.date.today().isoformat()}.csv"
+        )
         write_csv(rows, out, RETIRE_FIELDS)
-        print(f"{sum(r['eligible'] for r in rows)} of {len(rows)} versions eligible: {out}")
+        print(
+            f"{sum(r['eligible'] for r in rows)} of {len(rows)} versions eligible: {out}"
+        )
 
 
 rule linkcheck:
@@ -129,9 +144,13 @@ rule linkcheck:
 
         targets = lc.targets_from_csv("docs/datasets.csv")
         if _os.path.exists(_os.path.join(PUBLISH_BASE, "catalog.json")):
-            targets += lc.targets_from_catalogue(PUBLISH_BASE, private_base=PUBLISH_PRIVATE_BASE)
+            targets += lc.targets_from_catalogue(
+                PUBLISH_BASE, private_base=PUBLISH_PRIVATE_BASE
+            )
         _os.makedirs(PUBLISH_REPORTS, exist_ok=True)
-        out = _os.path.join(PUBLISH_REPORTS, f"linkcheck-{_dt.date.today().isoformat()}.csv")
+        out = _os.path.join(
+            PUBLISH_REPORTS, f"linkcheck-{_dt.date.today().isoformat()}.csv"
+        )
         results = lc.linkcheck(targets)
         lc.write_report(results, out)
         failed = [r for r in results if r.ok is False]
