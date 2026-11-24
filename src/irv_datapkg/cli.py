@@ -1,4 +1,4 @@
-"""``irv-datapkg`` command line: fetch, lock, validate, extract, release,
+"""``irv-datapkg`` command line: fetch, lock, validate, audit, extract, release,
 publish, retire, linkcheck, plus producer helpers for shell rules in recipes
 (provenance, to-cog)."""
 
@@ -207,22 +207,160 @@ def lock(datasets, base, release, private_base, output, items, props, record_bas
         raise click.ClickException(str(e))
 
 
+def remote_options(f):
+    """fsspec options for reading a remote catalogue (validate, audit)."""
+    f = click.option("--anon", is_flag=True, help="Anonymous (unsigned) S3 access.")(f)
+    f = click.option("--profile", default=None, help="AWS credentials profile.")(f)
+    f = click.option(
+        "--endpoint-url",
+        envvar="IRV_DATAPKG_ENDPOINT_URL",
+        default=None,
+        help="S3 endpoint, e.g. https://data.source.coop.",
+    )(f)
+    f = click.option(
+        "--storage-option", "-S", multiple=True, help="fsspec option KEY=VALUE (repeatable)."
+    )(f)
+    return f
+
+
 @main.command()
 @click.argument("target")
 @click.option("--private-base", default=None, help="Override {BASE}-private.")
 @click.option("--check-files", is_flag=True, help="Also verify every asset's sha256.")
-def validate(target, private_base, check_files):
+@click.option(
+    "--deep",
+    is_flag=True,
+    help="Also validate STAC schemas (core + extensions) and every data file's format "
+    "(COG profile, GeoParquet metadata); implies --check-files.",
+)
+@click.option(
+    "--sample",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Check the files of only N assets, chosen at random (metadata is checked in full).",
+)
+@click.option("--seed", type=int, default=None, help="Random seed for --sample.")
+@click.option(
+    "--dataset", "-d", "datasets", multiple=True, help="Only check this dataset (repeatable)."
+)
+@click.option("--strict", is_flag=True, help="Exit 1 on warnings too.")
+@remote_options
+def validate(
+    target,
+    private_base,
+    check_files,
+    deep,
+    sample,
+    seed,
+    datasets,
+    strict,
+    storage_option,
+    endpoint_url,
+    profile,
+    anon,
+):
     """Validate a catalogue at TARGET (a base URI) or a lock file (*.yaml)."""
+    warnings = []
     if target.endswith((".yaml", ".yml")):
         with open(target) as f:
             errors = check(yaml.safe_load(f), "lock")
     else:
-        errors = validate_catalog(target, private_base=private_base, check_files=check_files)
+        errors = validate_catalog(
+            target,
+            private_base=private_base,
+            check_files=check_files,
+            storage_options=_storage_options(storage_option, endpoint_url, profile, anon),
+            deep=deep,
+            sample=sample,
+            seed=seed,
+            datasets=datasets or None,
+            warnings=warnings,
+        )
+    for w in warnings:
+        click.echo(f"warning: {w}", err=True)
     for e in errors:
         click.echo(e, err=True)
-    if errors:
+    if errors or (strict and warnings):
+        click.echo(f"{len(errors)} errors, {len(warnings)} warnings", err=True)
         sys.exit(1)
-    click.echo("valid")
+    click.echo(f"valid ({len(warnings)} warnings)" if warnings else "valid")
+
+
+@main.command()
+@click.argument("target")
+@click.option(
+    "--base",
+    "-b",
+    default=None,
+    help="With a lock file TARGET: audit this base (e.g. a mirror) instead of the recorded one.",
+)
+@click.option("--private-base", default=None, help="Override {BASE}-private.")
+@click.option(
+    "--sample", type=click.IntRange(min=1), default=None, help="Re-hash only N random assets."
+)
+@click.option("--seed", type=int, default=None, help="Random seed for --sample.")
+@click.option(
+    "--dataset", "-d", "datasets", multiple=True, help="Only audit this dataset (repeatable)."
+)
+@click.option("--release", "-r", default=None, help="Only the versions this release pins.")
+@click.option("--jobs", "-j", default=4, show_default=True, help="Files hashed in parallel.")
+@click.option("--output", "-o", default=None, type=click.Path(), help="Write a CSV report.")
+@click.option("--verbose", "-v", is_flag=True, help="Print every file, not just failures.")
+@remote_options
+def audit(
+    target,
+    base,
+    private_base,
+    sample,
+    seed,
+    datasets,
+    release,
+    jobs,
+    output,
+    verbose,
+    storage_option,
+    endpoint_url,
+    profile,
+    anon,
+):
+    """Re-hash data files and report size/sha256 mismatches and missing files.
+
+    TARGET is a catalogue base (local path or URL: every asset of every version,
+    public and private) or a lock file (*.yaml: the locked assets). Exits 1 if
+    any file is missing, differs or cannot be read. Files of retired versions
+    may be missing.
+    """
+    from .catalog import qa
+
+    opts = _storage_options(storage_option, endpoint_url, profile, anon)
+    if target.endswith((".yaml", ".yml")):
+        if release:
+            raise click.UsageError("--release does not apply to a lock file")
+        refs = qa.iter_lock_assets(target, base=base, private_base=private_base)
+        if datasets:
+            refs = [r for r in refs if r.dataset in set(datasets)]
+    else:
+        if base:
+            raise click.UsageError("--base only applies to a lock file TARGET")
+        refs = qa.iter_assets(
+            target, private_base, opts, datasets=datasets or None, release=release
+        )
+    refs = list(refs)
+
+    def show(r):
+        if r.failed or verbose:
+            click.echo(f"{r.status.upper():9} {r.href} {r.detail}".rstrip(), err=r.failed)
+
+    results = qa.audit(refs, opts, sample_size=sample, seed=seed, jobs=jobs, progress=show)
+    if output:
+        qa.write_audit(results, output)
+    counts = {}
+    for r in results:
+        counts[r.status] = counts.get(r.status, 0) + 1
+    summary = ", ".join(f"{n} {s}" for s, n in sorted(counts.items())) or "nothing to audit"
+    click.echo(f"audited {len(results)} of {len(refs)} assets: {summary}")
+    if any(r.failed for r in results):
+        sys.exit(1)
 
 
 @main.command()

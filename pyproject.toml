@@ -41,18 +41,48 @@ irv-datapkg = "irv_datapkg.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "e2e: runs the Snakemake workflow on synthetic data (needs snakemake); select with -m e2e, skip with -m 'not e2e'",
+]
+
+[tool.snakefmt]
+# Snakefile and rules/ are formatted at snakefmt's default width, not [tool.black]'s
+line_length = 88
+
+[tool.black]
+line-length = 100
+# legacy files not yet formatted at 100 columns
+extend-exclude = 'scripts/(accept_requests|record_zenodo_view_download_stats|generate_datapackage_json)\.py|src/irv_datapkg/(__init__|retry|zenodo)\.py|tests/test_raster\.py'
 
 [project.optional-dependencies]
 # GDAL Python bindings and cdsapi are only needed by the producer workflow
 # (read_raster_meta, download_from_CDS); install from conda-forge where possible.
 producer = ["GDAL>=3.3", "cdsapi"]
-dev = ["pytest", "pytest-cov", "flake8", "hatch", "pystac"]
+# validate --deep: rio-cogeo's COG validator (without it COG layout checks are skipped)
+qa = ["rio-cogeo>=5"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "flake8",
+    "black",
+    "hatch",
+    "pystac",
+    "rio-cogeo>=5",
+]
 
 [tool.hatch.build]
 only-packages = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/irv_datapkg"]
+
+# Bundled STAC JSON schemas (validate --deep) live in a directory that is not a
+# Python package, which only-packages would leave out
+[tool.hatch.build.targets.wheel.force-include]
+"src/irv_datapkg/catalog/stac_schemas" = "irv_datapkg/catalog/stac_schemas"
+
+[tool.hatch.build.targets.sdist.force-include]
+"src/irv_datapkg/catalog/stac_schemas" = "src/irv_datapkg/catalog/stac_schemas"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/irv_datapkg/_version.py"
