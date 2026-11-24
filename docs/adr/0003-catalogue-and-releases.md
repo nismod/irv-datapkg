@@ -11,7 +11,7 @@ Status: accepted
   {BASE}/
     catalog.json                      # STAC root
     releases/YYYY.N/catalog.json      # release manifest
-    partitions/{scheme}/cells.parquet # spatial partition cell lists (ADR 0005)
+    partitions/{scheme}-v{N}/cells.parquet # immutable cell lists (ADR 0005)
     {dataset}/collection.json         # licence, citation, processing
     {dataset}/{version}/{item}.json   # STAC item per file/variant
     {dataset}/{version}/{item}.tif|.parquet|.zarr

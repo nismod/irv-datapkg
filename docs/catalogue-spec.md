@@ -17,7 +17,7 @@ Everything lives under one base URI `{BASE}`: a local path, `file://`, `s3://`,
 {BASE}/
   catalog.json                        # STAC root: child -> collections, irv:release -> releases
   releases/YYYY.N/catalog.json        # release manifest (section 5)
-  partitions/{scheme}/cells.parquet   # partition cells, ADR 0005 (not yet produced)
+  partitions/{scheme}-v{N}/cells.parquet # immutable partition cells, ADR 0005 (not yet produced)
   {dataset}/collection.json           # one collection per dataset, all versions
   {dataset}/{version}/{item}.json     # STAC item, one per file/variant
   {dataset}/{version}/{file}.tif|.parquet|.zarr

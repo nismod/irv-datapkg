@@ -13,7 +13,9 @@ Status: accepted
 - Implement both **quadkey** (default, because it fits rectangular bbox
   filtering) and **H3**. Other DGGS are future work.
 - Publish the list of cells with bbox and boundary geometry
-  (`{BASE}/partitions/{scheme}/cells.parquet`) as catalogue metadata.
+  (`{BASE}/partitions/{scheme}-v{N}/cells.parquet`, e.g. `quadkey-v1`) as
+  catalogue metadata. A published cell list is immutable; a new build is a new
+  `v{N}`, because data partitioned on it depends on the exact keys.
 - Review prior art before writing the method.
 
 Implementation: `packages/adaptive-partitions/` (see its README and `docs/prior-art.md`).
