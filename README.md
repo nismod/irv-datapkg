@@ -173,6 +173,8 @@ irv-datapkg lock --base s3://bucket/irv-datapkg --release 2026.1 aqueduct_flood 
 irv-datapkg fetch aqueduct_flood --lock datapkg.lock.yaml -p return_period=100 -o input/ --link hardlink
 irv-datapkg extract gridfinder --lock datapkg.lock.yaml --geometry region.geojson -o extracts/
 irv-datapkg validate s3://bucket/irv-datapkg --check-files
+irv-datapkg validate workspace/catalogue --deep         # + STAC schemas, COG/GeoParquet profiles
+irv-datapkg audit s3://bucket/irv-datapkg --sample 100  # re-hash files, report mismatches
 irv-datapkg release s3://bucket/irv-datapkg 2026.2 --from 2026.1 --pin aqueduct_flood=v2-r2
 ```
 
@@ -180,6 +182,10 @@ Private datasets are read from `{BASE}-private` using the same credentials. The
 download cache defaults to `~/.cache/irv-datapkg` (set `IRV_DATAPKG_CACHE` to
 change it). Producers write the catalogue with `build_collection`, `build_item`
 and `CatalogWriter` (`add_collection`, `add_item`, `release`, `retire`).
+
+Quality checks, the checksum audit and the end-to-end CI test are described in
+[`docs/qa.md`](docs/qa.md); the plan for retiring consumers' download rules is in
+[`docs/deprecation.md`](docs/deprecation.md).
 
 The client installs without GDAL Python bindings (`pip install irv-datapkg`).
 The producer workflow also needs `pip install irv-datapkg[producer]`, or GDAL
@@ -193,17 +199,20 @@ In case of warnings about `GDAL_DATA` not being set, try running:
 export GDAL_DATA=$(gdal-config --datadir)
 ```
 
-To format the workflow definition `Snakefile`:
+To format the workflow (snakefmt 2.x; settings in pyproject.toml):
 
 ```bash
-snakefmt Snakefile
+snakefmt Snakefile rules
 ```
 
-To format the Python helper scripts:
+To format the Python code (100 columns, from `[tool.black]` in pyproject.toml):
 
 ```bash
-black scripts
+black src tests scripts
 ```
+
+Tests: `pytest` (everything), `pytest -m "not e2e"` (fast unit tests) or
+`pytest -m e2e` (Snakemake end-to-end runs on synthetic data, docs/qa.md).
 
 ### Related work
 

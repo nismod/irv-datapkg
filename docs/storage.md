@@ -191,7 +191,8 @@ which pins one version of each dataset. Nothing is copied.
    `CatalogWriter.add_item` (WP5 rules). Bumps are new revisions (`-rN+1`).
    Published versions are never edited.
 3. **Validate** the local catalogue, checking every file:
-   `irv-datapkg validate {catalogue_base} --check-files`.
+   `irv-datapkg validate {catalogue_base} --deep` (schemas, file formats and
+   sha256; `--check-files` for sha256 only; docs/qa.md).
 4. **Publish the new versions** before the release:
    `snakemake -c1 catalogue_publish_dry_run`, review the report, then
    `snakemake -c1 catalogue_publish`. New versions become visible as
@@ -212,6 +213,8 @@ which pins one version of each dataset. Nothing is copied.
 7. **Validate and publish again**. Only the release manifest and the root
    `catalog.json` change, and the manifest goes up before the root.
 8. **Check the remote**: `irv-datapkg validate https://data.source.coop/nismod/irv-datapkg`,
+   `irv-datapkg audit https://data.source.coop/nismod/irv-datapkg --release 2027.1`
+   (re-hashes the released files; `--sample N` for a spot check, docs/qa.md),
    then `irv-datapkg lock --base ... --release 2027.1` in a scratch directory.
 9. **Tag and announce**. Make a git tag `release-2027.1` on the commit that
    produced the manifest. Write release notes from the diff of

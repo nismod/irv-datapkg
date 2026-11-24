@@ -1,4 +1,11 @@
-"""Synthetic fixture catalogue: tiny COGs and GeoParquet, generated locally."""
+"""Synthetic fixtures: a tiny catalogue (COGs, GeoParquet) and a workflow run."""
+
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
 
 import geopandas
 import numpy as np
@@ -9,6 +16,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from shapely.geometry import Point
 
+from irv_datapkg import recipes
 from irv_datapkg.catalog import CatalogWriter, build_collection, build_item
 
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
@@ -146,3 +154,94 @@ def catalogue(tmp_path_factory):
 
     writer.release("2026.1", pins={"flood": "v1-r1"})
     return base, private
+
+
+#
+# Synthetic Snakemake workflow run (test_workflow.py, test_e2e.py)
+#
+REPO = Path(__file__).parent.parent
+SNAKEMAKE = shutil.which("snakemake") or str(Path(sys.executable).parent / "snakemake")
+
+AQUEDUCT = [
+    "inunriver_rcp4p5_0000GFDL-ESM2M_2050_rp00100",
+    "inunriver_historical_000000000WATCH_1980_rp00010",
+    "inuncoast_rcp8p5_wtsub_2080_rp0100_0",
+    "inuncoast_historical_nosub_hist_rp0100_0",
+]
+
+
+@pytest.fixture(scope="session")
+def workflow_run(tmp_path_factory):
+    """Run the real Snakemake workflow on a synthetic T0 workspace (no downloads):
+    storm_fixed_rp and aqueduct_flood T1 plus Jamaica T2 summaries. Returns
+    (workdir, workspace); the local catalogue is workspace/catalogue."""
+    from test_recipes import make_tif
+
+    work = tmp_path_factory.mktemp("workflow")
+    for name in ("metadata", "bundled_data", "config", "scripts"):
+        (work / name).symlink_to(REPO / name)
+    ws = work / "ws"
+
+    # storm_fixed_rp T0: the record zip, with every mosaic as a tiny GeoTIFF
+    storm_raw = ws / "raw" / "storm_fixed_rp" / "1.0.0"
+    storm_raw.mkdir(parents=True)
+    tif = make_tif(work / "tiny.tif", width=72, height=36, nodata=0)
+    with zipfile.ZipFile(storm_raw / "STORM_FIXED_RETURN_PERIODS.zip", "w") as zf:
+        for model in (
+            "constant",
+            "CMCC-CM2-VHR4",
+            "CNRM-CM6-1-HR",
+            "EC-Earth3P-HR",
+            "HadGEM3-GC31-HM",
+        ):
+            for rp in (
+                list(range(10, 100, 10))
+                + list(range(100, 1000, 100))
+                + list(range(1000, 10001, 1000))
+            ):
+                zf.write(
+                    tif,
+                    f"STORM_FIXED_RETURN_PERIODS/STORM_FIXED_RETURN_PERIODS_{model}_{rp}_YR_RP.tif",
+                )
+    recipes.write_provenance(
+        storm_raw / "provenance.json",
+        [storm_raw / "STORM_FIXED_RETURN_PERIODS.zip"],
+        tool="test",
+        url_prefix="https://zenodo.org/records/10931452/files",
+    )
+
+    # aqueduct_flood T0 (checkpoint output directory)
+    aq_raw = ws / "raw" / "aqueduct_flood" / "v2"
+    aq_raw.mkdir(parents=True)
+    for slug in AQUEDUCT:
+        make_tif(aq_raw / f"{slug}.tif", width=72, height=36, nodata=-9999)
+    recipes.write_provenance(
+        aq_raw / "provenance.json",
+        sorted(aq_raw.glob("*.tif")),
+        tool="test",
+        url_prefix="http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2",
+    )
+
+    env = dict(os.environ, ZENODO_TOKEN="x", CDSAPI_URL="https://cds.invalid", CDSAPI_KEY="x")
+    env["PATH"] = f"{Path(sys.executable).parent}:{env['PATH']}"
+    cmd = [
+        SNAKEMAKE,
+        "--snakefile",
+        str(REPO / "Snakefile"),
+        "--directory",
+        str(work),
+        "--configfile",
+        str(REPO / "config.json"),
+        "--config",
+        f"workspace_dir={ws}",
+        "--cores",
+        "2",
+        "--force-use-threads",
+        "all_t1_storm_fixed_rp",
+        "all_t1_aqueduct_flood",
+        "data/JAM/storm.csv",
+        "data/JAM/aqueduct_flood.csv",
+    ]
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-6000:]
+    return work, ws

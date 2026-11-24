@@ -5,7 +5,8 @@
 # declares the item (properties, T0 sources) with register_t1(). This generic rule
 # turns each file into {item}.json, creating or updating the collection from
 # metadata/*.yml. Targets: all_t1 (everything, then validates the catalogue) or
-# all_t1_{dataset} (one dataset).
+# all_t1_{dataset} (one dataset). --config validate_deep=true makes all_t1 run
+# the deep checks too (STAC schemas, COG/GeoParquet profiles, sha256; docs/qa.md).
 #
 
 
@@ -82,7 +83,14 @@ rule all_t1:
     run:
         from irv_datapkg.catalog import validate_catalog
 
-        errors = validate_catalog(CATALOGUE)
+        warnings = []
+        errors = validate_catalog(
+            CATALOGUE,
+            deep=bool(config.get("validate_deep", False)),
+            warnings=warnings,
+        )
+        for warning in warnings:
+            print(f"warning: {warning}")
         for error in errors:
             print(error)
         if errors:

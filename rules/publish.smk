@@ -9,6 +9,7 @@
 #   publish_private_remote   remote private base (default {publish_remote}-private)
 #   publish_private          publish the private root too (default true)
 #   publish_storage_options  fsspec options for the remote, e.g. {endpoint_url: https://data.source.coop}
+#   validate_deep            deep-validate (docs/qa.md) before publishing (default false)
 #
 # Rule names are prefixed "catalogue_" because rules/zenodo.smk already defines
 # a rule called "publish". None of these rules declare outputs, so they run
@@ -49,7 +50,11 @@ def _publish(dry_run, log_path):
 
     if not PUBLISH_REMOTE:
         raise ValueError("Set publish_remote in config (see docs/storage.md)")
-    errors = validate_catalog(PUBLISH_BASE, private_base=PUBLISH_PRIVATE_BASE)
+    errors = validate_catalog(
+        PUBLISH_BASE,
+        private_base=PUBLISH_PRIVATE_BASE,
+        deep=bool(config.get("validate_deep", False)),
+    )
     if errors:
         raise ValueError("Catalogue is invalid, not publishing:\n" + "\n".join(errors))
     summary = publish(
