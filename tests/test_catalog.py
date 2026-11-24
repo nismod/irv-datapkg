@@ -210,6 +210,19 @@ def test_immutability_and_releases(catalogue, tmp_path):
         writer.add_item(changed, src)
     with pytest.raises(ImmutableError):
         writer.release("2026.1")
+    # a released version is sealed: no new items can join it
+    new_item = build_item(
+        src,
+        "flood",
+        "v1-r1",
+        "river_rcp45_rp1000",
+        properties={"hazard": "river", "rcp": "4.5", "return_period": 1000},
+        source_url="x",
+        retrieved="2026-01-15",
+        commit=COMMIT,
+    )
+    with pytest.raises(ImmutableError):
+        writer.add_item(new_item, src)
     with pytest.raises(ValueError):
         writer.release("2026.2", pins={"flood": "v9-r1"})
     with pytest.raises(ValueError):

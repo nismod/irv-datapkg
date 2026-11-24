@@ -55,6 +55,8 @@ Everything lives under one base URI `{BASE}`: a local path, `file://`, `s3://`,
 - A published `{dataset}/{version}/` directory is **immutable**. The writer
   refuses to replace a file or item with different content. Re-writing
   identical content is a no-op. Fixes go out as a new revision.
+- Once a release pins a version, that version is **sealed**: no new items can
+  be added to it either.
 - `collection.json` is the only mutable per-dataset document. It gains links
   and versions as versions are added. `irv:versions` lists versions oldest
   first, and the last one is "latest".

@@ -355,6 +355,10 @@ class CatalogWriter:
             old = self._read(item_url)
             if old != item:
                 raise ImmutableError(f"{item_url} exists with different content")
+        elif self._released(dataset, version):
+            raise ImmutableError(
+                f"{dataset} {version} is pinned by a release; publish a new version instead"
+            )
         if self._exists(file_url):
             if (
                 _fs.to_multihash(_fs.sha256_file(file_url, self.storage_options))
@@ -386,6 +390,15 @@ class CatalogWriter:
             spatial[0] = _union(spatial[0], item["bbox"])
         self._write(coll_url, collection)
         return item_url
+
+    def _released(self, dataset: str, version: str) -> bool:
+        """True if any release pins ``dataset`` at ``version`` (the version is then sealed)."""
+        for name in self.releases():
+            manifest = self._read(_fs.join(self.base, "releases", name, "catalog.json"))
+            pinned = manifest.get("irv:datasets", {}).get(dataset)
+            if pinned and pinned.get("version") == version:
+                return True
+        return False
 
     def releases(self) -> list:
         root = self._read(self._ensure_root("public"))

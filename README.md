@@ -156,6 +156,10 @@ download cache defaults to `~/.cache/irv-datapkg` (set `IRV_DATAPKG_CACHE` to
 change it). Producers write the catalogue with `build_collection`, `build_item`
 and `CatalogWriter` (`add_collection`, `add_item`, `release`).
 
+The client installs without GDAL Python bindings (`pip install irv-datapkg`).
+The producer workflow also needs `pip install irv-datapkg[producer]`, or GDAL
+and cdsapi from conda-forge as in `environment.yml`.
+
 ### Development Notes
 
 In case of warnings about `GDAL_DATA` not being set, try running:
