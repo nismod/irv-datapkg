@@ -14,6 +14,7 @@ They record the outcome of the design discussion (November 2026).
 | [0006](0006-boundaries-and-extracts.md) | Boundary sets side by side; client-built T2 extracts; Zenodo continues |
 | [0007](0007-producer-consumer-scope.md) | What moves to irv-datapkg, what stays in consumers, what is dropped |
 | [0008](0008-naming-and-retirements.md) | Keep the irv-datapkg name; retire irv-autopkg |
+| [0009](0009-decisions-from-the-build.md) | Settled after the first build: DEM tiles, GEM, GADM, GLOFAS, ISIMIP, threads, T2 changes, release scope, EEZ |
 
 Dataset ids are listed in [`../datasets.csv`](../datasets.csv).
 

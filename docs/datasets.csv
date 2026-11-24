@@ -2,13 +2,13 @@ id,title,upstream,upstream_version,access,used_by,work_package
 aqueduct_flood,WRI Aqueduct flood hazard maps,s3://wri-projects/AqueductFloodTool/download/v2,v2,public,irv-datapkg;open-gira;infra-risk-vis,WP5
 storm_fixed_rp,STORM tropical cyclone fixed return period wind speed mosaics,Zenodo 10.5281/zenodo.10931452,1.0.0,public,irv-datapkg;open-gira;infra-risk-vis,WP5
 jrc_flood_globalmaps,JRC global river flood hazard maps (GlobalMaps),https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/FLOODS/GlobalMaps/,unversioned,public,irv-datapkg;open-gira,WP5
-jrc_flood_glofas,JRC CEMS-GLOFAS river flood hazard,https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/CEMS-GLOFAS/flood_hazard/,v2.0.0,public,infra-risk-vis,WP5
+jrc_flood_glofas,JRC CEMS-GLOFAS river flood hazard (global COG per return period),https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/CEMS-GLOFAS/flood_hazard/,v2.0.0,public,infra-risk-vis,WP5
 ghsl_pop,GHSL population grid,https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/,R2023A,public,irv-datapkg;open-gira;infra-risk-vis,WP5
 ghsl_built_s,GHSL built-up surface,https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_S_GLOBE_R2023A/,R2023A,public,irv-datapkg;open-gira;infra-risk-vis,WP5
 gridfinder,Gridfinder predicted power grid and targets,Zenodo 10.5281/zenodo.3628142,1.0,public,irv-datapkg;open-gira,WP5
 wri_powerplants,WRI Global Power Plant Database,https://wri-dataportal-prod.s3.amazonaws.com/manual/global_power_plant_database_v_1_3.zip,1.3,public,irv-datapkg;open-gira,WP5
 gem_seismic_hazard,GEM global seismic hazard map (PGA 475y rock),Zenodo 10.5281/zenodo.8409647,2023.1.0,public,irv-datapkg;infra-risk-vis,WP5
-isimip_heat_drought,ISIMIP heat and drought expected occurrence,Zenodo 10.5281/zenodo.7732393 / 10.5281/zenodo.11582369,to reconcile,public,irv-datapkg;infra-risk-vis,WP5
+isimip_heat_drought,ISIMIP heat and drought expected occurrence,Zenodo 10.5281/zenodo.11582369,11582369,public,irv-datapkg;infra-risk-vis,WP5
 copernicus_lulc,Copernicus CDS satellite land cover,Copernicus CDS satellite-land-cover,v2.1.1,public,irv-datapkg;infra-risk-vis,WP5
 copernicus_lc100,Copernicus global dynamic land cover LC100,Zenodo 10.5281/zenodo.3939050,v3.0.1,public,open-gira,WP6
 globcover_2009,ESA GlobCover 2009,http://due.esrin.esa.int/files/Globcover2009_V2.3_Global_.zip,V2.3,public,open-gira,WP6
@@ -16,9 +16,9 @@ copernicus_dem_glo90,Copernicus DEM GLO-90,https://prism-dem-open.copernicus.eu/
 merit_dem,MERIT DEM derived elevation and slope 250 m,Zenodo 10.5281/zenodo.1447210,v1.0,public,infra-risk-vis,WP7
 openstreetmap,OpenStreetMap planet (filtered) and derived networks,s3://osm-planet-eu-central-1/planet/pbf/,planet-250414,public,irv-datapkg;open-gira;infra-risk-vis,WP8
 boundaries_naturalearth,Natural Earth admin boundaries and map units,https://www.naturalearthdata.com/,5.1,public,irv-datapkg;open-gira,WP9
-boundaries_gadm,GADM administrative boundaries,https://geodata.ucdavis.edu/gadm/,3.6 (4.1 to consider),public,open-gira;infra-risk-vis,WP9
+boundaries_gadm,GADM administrative boundaries (no redistribution),https://geodata.ucdavis.edu/gadm/,3.6,private,open-gira;infra-risk-vis,WP9
 boundaries_geoboundaries,geoBoundaries gbOpen,https://www.geoboundaries.org/api/current/gbOpen/,current,public,irv-datapkg,WP9
-boundaries_eez,Marine boundaries (EEZ),to choose,to choose,public,none,WP9
+boundaries_eez,Marine Regions union of world country boundaries and EEZs,https://www.marineregions.org/,latest (to pin),public (licence to check),none,WP9
 naturalearth_coastlines,Natural Earth 10m ocean,https://www.naturalearthdata.com/,5.1,public,open-gira,WP6
 arup_landslide,ARUP/World Bank global landslide hazard,World Bank DDH dataset 0037584,unversioned,public,open-gira;infra-risk-vis,WP6
 hydrobasins,HydroBASINS,https://data.hydrosheds.org/file/hydrobasins/standard/,v1c,public,open-gira;infra-risk-vis,WP6
