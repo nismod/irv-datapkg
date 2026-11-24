@@ -1,4 +1,8 @@
 {
     "datapkg_version": "0.2.1",
-    "zenodo_url": "zenodo.org"
+    "zenodo_url": "zenodo.org",
+    "workspace_dir": "workspace",
+    "raw_dir": "{workspace_dir}/raw",
+    "build_dir": "{workspace_dir}/build",
+    "catalogue_base": "{workspace_dir}/catalogue"
 }

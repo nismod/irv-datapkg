@@ -1,77 +1,97 @@
 #
-# OpenStreetMap Planet
+# OpenStreetMap planet, filtered to infrastructure sectors
 #
-rule download_osm:
+# Collection: openstreetmap (metadata/openstreetmap.yml, T2 package "openstreetmap")
+#
+# Sector filters: config/{sector}.txt (osmium tags-filter expressions) and
+# config/{sector}.conf.ini (GDAL OSM driver layer/attribute configuration).
+#
+OSM_PLANET = COLLECTIONS["openstreetmap"].upstream_dir  # planet-250414
+OSM_YEAR = f"20{OSM_PLANET[7:9]}"  # planet-YYMMDD
+OSM_RAW = raw_dir("openstreetmap")
+OSM_BUILD = build_dir("openstreetmap")
+# sector -> GDAL OSM driver layers published as items (empty layers are not items)
+OSM_LAYERS = {
+    "rail": ["points", "lines", "multipolygons"],
+    "roads-tertiary": ["lines"],
+}
+
+
+@lru_cache(maxsize=None)
+def openstreetmap_items():
+    return {
+        f"{sector}_{layer}": T1Item(
+            ext="parquet",
+            properties={"sector": sector, "layer": layer},
+            sources=[f"{OSM_RAW}/{OSM_PLANET}.osm.pbf"],
+        )
+        for sector, layers in OSM_LAYERS.items()
+        for layer in layers
+    }
+
+
+register_t1("openstreetmap", openstreetmap_items)
+
+
+rule openstreetmap_t0:
+    """T0: the pinned planet file, md5-checked"""
     output:
-        pbf=protected("incoming_data/osm/planet-250414.osm.pbf"),
+        pbf=protected(f"{OSM_RAW}/{OSM_PLANET}.osm.pbf"),
+        md5=f"{OSM_RAW}/{OSM_PLANET}.osm.pbf.md5",
+        provenance=f"{OSM_RAW}/provenance.json",
+    params:
+        bucket=f"s3://osm-planet-eu-central-1/planet/pbf/{OSM_YEAR}/",
+        planet=OSM_PLANET,
+        provenance=provenance_cmd(
+            "provenance.json",
+            f"{OSM_PLANET}.osm.pbf {OSM_PLANET}.osm.pbf.md5",
+            "aws s3 sync",
+            url_prefix=f"s3://osm-planet-eu-central-1/planet/pbf/{OSM_YEAR}",
+        ),
     shell:
         """
-        mkdir -p incoming_data/osm
-        cd incoming_data/osm
-        aws s3 sync --no-sign-request s3://osm-planet-eu-central-1/planet/pbf/2025/ . \
+        mkdir -p $(dirname {output.pbf})
+        cd $(dirname {output.pbf})
+        aws s3 sync --no-sign-request {params.bucket} . \
             --exclude '*' \
-            --include planet-250414.osm.pbf \
-            --include planet-250414.osm.pbf.md5
-        md5sum --check planet-250414.osm.pbf.md5
+            --include {params.planet}.osm.pbf \
+            --include {params.planet}.osm.pbf.md5
+        md5sum --check {params.planet}.osm.pbf.md5
+        {params.provenance}
         """
 
 
-rule filter_osm_data:
+rule openstreetmap_filter:
+    """Intermediate: planet filtered to one sector's tags"""
     input:
-        pbf="incoming_data/osm/planet-250414.osm.pbf",
+        pbf=rules.openstreetmap_t0.output.pbf,
+        expressions="config/{sector}.txt",
     output:
-        pbf="incoming_data/osm/planet-250414_{SECTOR}.osm.pbf",
+        pbf=f"{OSM_BUILD}/{OSM_PLANET}_{{sector}}.osm.pbf",
     shell:
         """
         osmium tags-filter \
-            --expressions=config/{wildcards.SECTOR}.txt \
+            --expressions={input.expressions} \
             --output={output.pbf} \
             {input.pbf}
         """
 
 
-def boundary_bbox(wildcards):
-    geom = boundary_geom(wildcards.ISO3)
-    minx, miny, maxx, maxy = geom.bounds
-    # LEFT,BOTTOM,RIGHT,TOP
-    return f"{minx},{miny},{maxx},{maxy}"
-
-
-rule geojson_boundary:
-    output:
-        json="data/{ISO3}/boundary__{ISO3}.geojson",
-    run:
-        geom = boundary_geom(wildcards.ISO3)
-        json = '{"type":"Feature","geometry": %s}' % shapely.to_geojson(geom)
-        with open(output.json, "w") as fh:
-            fh.write(json)
-
-
-rule extract_osm_data:
+rule openstreetmap_t1:
+    """T1: one GeoParquet per sector and OGR layer (streamed with ogr2ogr)"""
     input:
-        pbf="incoming_data/osm/planet-250414_{SECTOR}.osm.pbf",
-        json="data/{ISO3}/boundary__{ISO3}.geojson",
+        pbf=f"{OSM_BUILD}/{OSM_PLANET}_{{sector}}.osm.pbf",
+        conf="config/{sector}.conf.ini",
     output:
-        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",
+        parquet=f"{t1_dir('openstreetmap')}/{{sector}}_{{layer}}.parquet",
+    wildcard_constraints:
+        sector="|".join(OSM_LAYERS),
+        layer="points|lines|multilinestrings|multipolygons|other_relations",
     params:
-        bbox_str=boundary_bbox,
+        ogr2ogr=lambda wildcards, input, output: recipes.ogr2ogr_geoparquet_cmd(
+            input.pbf, output.parquet, wildcards.layer
+        ),
     shell:
         """
-        osmium extract \
-            --polygon {input.json} \
-            --set-bounds \
-            --strategy=complete_ways \
-            --output={output.pbf} \
-            {input.pbf}
-        """
-
-
-rule convert_osm_data:
-    input:
-        pbf="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.osm.pbf",
-    output:
-        gpkg="data/{ISO3}/openstreetmap/openstreetmap_{SECTOR}__{ISO3}.gpkg",
-    shell:
-        """
-        OSM_CONFIG_FILE=config/{wildcards.SECTOR}.conf.ini ogr2ogr -f GPKG -overwrite {output.gpkg} {input.pbf}
+        OSM_CONFIG_FILE={input.conf} {params.ogr2ogr}
         """

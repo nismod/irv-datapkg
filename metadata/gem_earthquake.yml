@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=irv-datapkg-schema.json
+name: gem_earthquake
+description: GEM Global Seismic Hazard Map
+version: 2023.1.0
+dataset_name: gem_earthquake
+data_author: Pagani, M., Garcia-Pelaez, J., Gee, R., Johnson, K., Poggi, V., Silva, V., et al. (GEM Foundation)
+data_title: GEM Global Seismic Hazard Map
+data_title_long: Global Earthquake Model (GEM) Global Seismic Hazard Map, version 2023.1
+data_summary: >
+  The GEM Global Seismic Hazard Map (version 2023.1) depicts the geographic
+  distribution of the peak ground acceleration (PGA) with a 10% probability of
+  being exceeded in 50 years (a return period of 475 years), computed for
+  reference rock conditions (shear wave velocity, VS30, of 760-800 m/s). The
+  map is created by collating maps computed using national and regional
+  probabilistic seismic hazard models developed by various institutions and
+  projects, and by GEM Foundation scientists.
+
+data_citation: >
+  Johnson, K., Villani, M., Bayliss, K., Brooks, C., Chandrasekhar, S.,
+  Chartier, T., Chen, Y., Garcia-Pelaez, J., Gee, R., Styron, R., Rood, A.,
+  Simionato, M., Pagani, M. (2023). Global Earthquake Model (GEM) Seismic
+  Hazard Map (version 2023.1 - June 2023). https://doi.org/10.5281/zenodo.8409647
+
+data_license:
+  name: CC-BY-NC-SA-4.0
+  title: Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+  path: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+data_origin_url: https://doi.org/10.5281/zenodo.8409647
+data_formats: ["GeoTIFF"]
+
+collections:
+  - id: gem_seismic_hazard
+    version: 2023.1.0-r1
+    upstream_url: Zenodo 10.5281/zenodo.8409647
+    upstream_version: 2023.1.0
+    doi: 10.5281/zenodo.8409647
+    # Non-commercial licence: confirm it may go in the public prefix before publishing (ADR 0002)
+    license: CC-BY-NC-SA-4.0
+    access: public
+    units: g
+    dimensions: [hazard, imt, return_period, site]
+    keywords: [earthquake, seismic hazard, pga]
+    processing:
+      - download the Zenodo record (zenodo_get)
+      - extract the PGA 475 year rock GeoTIFF from GEM-GSHM_PGA-475y-rock_v2023.zip
+      - convert to COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+# Not part of the Zenodo country packages so far; set enabled to add it
+t2:
+  enabled: false

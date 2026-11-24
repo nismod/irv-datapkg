@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../../metadata/irv-datapkg-schema.json
+# Copy to metadata/<package>.yml and replace <...>. See docs/recipes.md.
+#
+# T2 datapackage.json resource (Zenodo country packages)
+name: <package>                 # directory under data/{ISO3}/
+description: <short description>
+version: "<upstream version>"
+dataset_name: <package>
+data_title: <title>
+data_title_long: <long title>   # default STAC collection title
+data_author: <authors>
+data_summary: >
+  <what the data is, how it was made, caveats>   # default STAC description
+data_citation: >
+  <preferred citation>          # default sci:citation
+data_license:
+  name: <licence name>
+  title: <licence title>
+  path: <licence URL>           # default STAC license link
+data_origin_url: <landing page>
+data_formats: ["GeoTIFF"]
+
+# T1 STAC collection(s): one per dataset id in docs/datasets.csv
+collections:
+  - id: <dataset_id>
+    version: <upstream>-r1      # bump -rN whenever output bytes or metadata change
+    upstream_url: <where the data comes from>
+    upstream_version: "<as published>"
+    license: <SPDX id, or other/proprietary>
+    access: public              # must match docs/datasets.csv
+    doi: <optional upstream DOI>
+    units: <default band unit, e.g. m>
+    nodata: <default nodata, if the source lacks one>
+    dimensions: [hazard, return_period]   # item properties that tell variants apart
+    keywords: [<keyword>]
+    processing:
+      - download <what> (<tool>)
+      - convert to COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+# T2 per-region extracts
+t2:
+  enabled: false                # true adds the package resource to every country package
+  stem: "{upstream_name}"       # file name: {stem}__{ISO3}.tif|gpkg
+  clip: bbox                    # bbox | geometry | none
+  summary: true                 # data/{ISO3}/<package>.csv from item properties
+  summary_columns: [hazard, return_period]

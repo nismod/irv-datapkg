@@ -1,0 +1,7 @@
+# Snakemake workflow profile, picked up automatically (snakemake >= 8).
+#
+# Run `run:` jobs in threads instead of spawning one Snakemake subprocess per job:
+# each spawn re-parses the workflow (~3-5 s), which dominates the tens of thousands
+# of small T1-registration and T2-extract jobs. The heavy lifting is in GDAL/Arrow,
+# which release the GIL; the local catalogue is protected by a file lock.
+force-use-threads: true

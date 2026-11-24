@@ -1,81 +1,93 @@
 #
-# Copernicus DEM
+# Copernicus DEM GLO-90
 #
-rule list_dem_glo90:
+# Collection: copernicus_dem_glo90 (metadata/copernicus_dem.yml, T2 package "copernicus_dem")
+#
+DEM_RAW = raw_dir("copernicus_dem_glo90")
+DEM_BUILD = build_dir("copernicus_dem_glo90")
+DEM_RELEASE = "COP-DEM_GLO-90-DGED__2023_1"
+DEM_LIST_URL = f"https://prism-dem-open.copernicus.eu/pd-desk-open-access/publicDemURLs/{DEM_RELEASE}"
+DEM_NODATA = COLLECTIONS["copernicus_dem_glo90"].nodata
+
+
+@lru_cache(maxsize=None)
+def copernicus_dem_glo90_items():
+    return {
+        "copernicus_dem_glo90": T1Item(
+            ext="tif",
+            sources=[f"{DEM_RAW}/{DEM_RELEASE}.txt"],
+            source_url=DEM_LIST_URL,
+        )
+    }
+
+
+register_t1("copernicus_dem_glo90", copernicus_dem_glo90_items)
+
+
+rule copernicus_dem_glo90_list:
+    """T0: list of tile URLs for the release"""
     output:
-        txt="incoming_data/copernicus_dem/COP-DEM_GLO-90-DGED__2023_1.txt",
-    shell:
-        """
-        out_dir = $(dirname {output.txt})
-        mkdir -p $out_dir
+        txt=f"{DEM_RAW}/{DEM_RELEASE}.txt",
+        provenance=f"{DEM_RAW}/{DEM_RELEASE}.txt.provenance.json",
+    run:
+        recipes.download(DEM_LIST_URL, output.txt)
 
-        curl -k -H "accept: csv" \
-                    https://prism-dem-open.copernicus.eu/pd-desk-open-access/publicDemURLs/COP-DEM_GLO-90-DGED__2023_1 \
-                    > {output.txt}
-        """
 
-rule download_dem_glo90:
+rule copernicus_dem_glo90_t0:
+    """T0: every tile archive (tar), with per-tile provenance"""
     input:
-        txt=rules.list_dem_glo90.output.txt
+        txt=rules.copernicus_dem_glo90_list.output.txt,
     output:
-        dir=directory("incoming_data/copernicus_dem/archive"),
+        dir=directory(f"{DEM_RAW}/archive"),
+    params:
+        listing=lambda wildcards, input: os.path.abspath(input.txt),
+        provenance=provenance_cmd(
+            "provenance.json", "*.tar", "wget", urls_from="urls.txt"
+        ),
     shell:
         """
         mkdir -p {output.dir}.tmp
-        pushd {output.dir}.tmp
-
-        cat ../COP-DEM_GLO-90-DGED__2023_1.txt | parallel 'wget --no-clobber {{}}'
-
-        popd
-        mv {output.dir}.tmp {output.dir}
+        cd {output.dir}.tmp
+        # the list may be CSV: keep the URL column
+        grep -o 'https://[^,]*' {params.listing} >urls.txt
+        parallel -j 8 'wget --no-clobber --quiet {{}}' <urls.txt
+        {params.provenance}
+        cd ..
+        mv archive.tmp archive
         """
 
-rule extract_dem_glo90:
+
+rule copernicus_dem_glo90_tiles:
+    """Intermediate: the DEM GeoTIFF from each tile archive"""
     input:
-        dir=rules.download_dem_glo90.output.dir,
+        dir=rules.copernicus_dem_glo90_t0.output.dir,
     output:
-        dir=directory("incoming_data/copernicus_dem/tiles"),
-    shell:
-        """
-        pushd incoming_data/copernicus_dem
-            mkdir -p tiles
+        dir=directory(f"{DEM_BUILD}/tiles"),
+    run:
+        os.makedirs(output.dir, exist_ok=True)
+        for tar in sorted(Path(input.dir).glob("*.tar")):
+            name = tar.name[: -len(".tar")]
+            recipes.unzip(
+                tar, output.dir, members=[f"{name}_DEM.tif"], flatten=True
+            )
 
-            # Extract
-            find -type f -name '*.tar' | \
-                head | \
-                sed 's/.\\/archive\\///' | \
-                sed 's/.tar//' | \
-                parallel -j 1 \
-                    tar xvf \
-                        {{}}.tar \
-                        --skip-old-files \
-                        --strip-components=2 \
-                        -C ./tiles/ \
-                        {{}}/DEM/{{}}_DEM.tif
-        popd
-        """
 
-rule convert_dem_glo90:
+rule copernicus_dem_glo90_t1:
+    """T1: mosaic the tiles into one global COG"""
     input:
-        dir=rules.extract_dem_glo90.output.dir,
+        dir=rules.copernicus_dem_glo90_tiles.output.dir,
     output:
-        tiff="incoming_data/copernicus_dem/copernicus_dem.tif",
-    shell:
-        """
-        pushd incoming_data/copernicus_dem
-            # Build list
-            find -type f -name '*.tif' > tileList.txt
-
-            # Build VRT
-            gdalbuildvrt -input_file_list tileList.txt copernicus_dem.vrt
-
-            # Combine to big TIFF
-            gdal_translate \
-                -co "COMPRESS=LZW" \
-                -co "TILED=yes" \
-                -co "BIGTIFF=YES" \
-                -of "GTiff" \
-                copernicus_dem.vrt \
-                copernicus_dem.tif
-        popd
-        """
+        tif=f"{t1_dir('copernicus_dem_glo90')}/copernicus_dem_glo90.tif",
+    run:
+        tiles = sorted(Path(input.dir).glob("*_DEM.tif"))
+        vrt = recipes.build_vrt(
+            tiles, f"{DEM_BUILD}/mosaic.vrt", vrt_nodata=DEM_NODATA
+        )
+        recipes.to_cog(
+            vrt,
+            output.tif,
+            nodata=DEM_NODATA,
+            units="m",
+            descriptions="surface elevation (DSM), EGM2008 heights",
+            overview_resampling="average",
+        )

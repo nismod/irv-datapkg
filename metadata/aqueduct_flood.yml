@@ -23,3 +23,29 @@ data_license:
 
 data_origin_url: http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/index.html
 data_formats: ["GeoTIFF"]
+
+# T1: STAC collection(s) published by this recipe (see docs/recipes.md)
+collections:
+  - id: aqueduct_flood
+    version: v2-r1
+    upstream_url: s3://wri-projects/AqueductFloodTool/download/v2
+    upstream_version: v2
+    license: CC-BY-4.0
+    access: public
+    units: m
+    dimensions: [hazard, rcp, epoch, gcm, return_period, subsidence, sea_level_rise]
+    keywords: [flood, hazard, inundation, climate]
+    processing:
+      - mirror every GeoTIFF in the upstream bucket (aws s3 sync --no-sign-request)
+      - convert each GeoTIFF to a COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+      - variant properties (hazard, rcp, epoch, gcm, return period, subsidence, sea level rise) parsed once from upstream file names
+
+# T2: per-country extracts (Zenodo packages)
+t2:
+  enabled: true
+  stem: "{upstream_name}"
+  # as before: no "nosub" (incl. coastal baseline), sea-level-rise percentile or 1.5 degree variants
+  exclude_patterns: [nosub, perc, "1_5"]
+  summary: true
+  summary_columns: [hazard, epoch, rcp, gcm, return_period]
+  baseline_epoch: 2010

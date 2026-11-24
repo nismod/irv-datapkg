@@ -11,7 +11,10 @@ dependencies:
       - -e . # irv_datapkg helper
   - awscli # connect to AWS, download from S3
   - black # Python formatting
-  - gdal>=3.3 # command-line tools for spatial data
+  - gdal>=3.9 # command-line tools for spatial data
+  - libgdal-arrow-parquet # ogr2ogr -f Parquet (OSM GeoParquet)
+  - libgdal-netcdf # NetCDF to COG
+  - parallel # parallel tile downloads (Copernicus DEM)
   - geopandas>=1.0.1 # geospatial dataframes
   - osmium-tool # openstreetmap extracts
   - pyyaml # read YAML files

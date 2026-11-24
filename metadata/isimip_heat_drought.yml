@@ -87,3 +87,26 @@ data_license:
 
 data_origin_url: https://doi.org/10.5281/zenodo.8147088
 data_formats: ["GeoTIFF"]
+
+collections:
+  - id: isimip_heat_drought
+    version: 2-r1
+    upstream_url: Zenodo 10.5281/zenodo.7732393
+    upstream_version: "2"
+    doi: 10.5281/zenodo.8147088
+    license: CC0-1.0
+    access: public
+    dimensions: [hazard, rcp, epoch, gcm, model]
+    keywords: [heat, drought, climate]
+    processing:
+      - download the Zenodo record (zenodo_get)
+      - extract the expected occurrence GeoTIFFs from lange2020_expected_occurrence.zip
+      - convert each GeoTIFF to a COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+      - variant properties (hazard, rcp, epoch, gcm, impact model) parsed once from upstream file names
+
+t2:
+  enabled: true
+  stem: "{upstream_name}"
+  summary: true
+  summary_columns: [hazard, epoch, rcp, gcm, model]
+  baseline_epoch: 2010

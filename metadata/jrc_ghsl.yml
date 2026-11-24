@@ -65,3 +65,41 @@ data_license:
 
 data_origin_url: https://ghsl.jrc.ec.europa.eu/
 data_formats: ["GeoTIFF"]
+
+collections:
+  - id: ghsl_pop
+    version: R2023A-r1
+    title: GHSL population grid (GHS-POP R2023A)
+    upstream_url: https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/
+    upstream_version: R2023A
+    doi: 10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE
+    license: CC-BY-4.0
+    access: public
+    units: people
+    dimensions: [epoch, resolution]
+    keywords: [population, exposure]
+    processing:
+      - download one zip per epoch and resolution
+      - extract the GeoTIFF from each zip
+      - convert to COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+  - id: ghsl_built_s
+    version: R2023A-r1
+    title: GHSL built-up surface (GHS-BUILT-S R2023A)
+    upstream_url: https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_S_GLOBE_R2023A/
+    upstream_version: R2023A
+    doi: 10.2905/9F06F36F-4B11-47EC-ABB0-4F8B7B1D72EA
+    license: CC-BY-4.0
+    access: public
+    units: m2
+    dimensions: [epoch, resolution, use]
+    keywords: [built-up, exposure]
+    processing:
+      - download one zip per epoch, resolution and use (total or non-residential)
+      - extract the GeoTIFF from each zip
+      - convert to COG (ZSTD + predictor, 512 px tiles, overviews), source grid kept
+
+t2:
+  enabled: true
+  stem: "{upstream_name}"
+  summary: true
+  summary_columns: {dataset: product, release: release, resolution: resolution, epoch: epoch}
