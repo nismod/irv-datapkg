@@ -5,12 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import cdsapi
 import geopandas
 import pyproj
 import shapely
 
-from osgeo import gdal
 from shapely.ops import transform
 
 
@@ -29,6 +27,8 @@ class RasterMeta:
 
 def read_raster_meta(fname: Path) -> RasterMeta:
     """Read pixel size and CRS from a raster file"""
+    from osgeo import gdal
+
     gdal.UseExceptions()
     dataset = gdal.Open(fname)
 
@@ -107,6 +107,8 @@ def download_from_CDS(
             year: Year of dataset applicability
         output_path: Where to save the downloaded file
     """
+    import cdsapi
+
     client = cdsapi.Client()
 
     # N.B. Files are covered by licences which need to be manually accepted, e.g.

@@ -16,5 +16,13 @@ dependencies:
   - osmium-tool # openstreetmap extracts
   - pyyaml # read YAML files
   - pyogrio # faster geospatial i/o
+  - rasterio>=1.3 # windowed raster reads for the catalogue client
+  - pyarrow # GeoParquet
+  - fsspec # catalogue access over local, s3 and https roots
+  - s3fs # fsspec s3:// support
+  - aiohttp # fsspec https:// support
+  - click # irv-datapkg command line
+  - jsonschema # catalogue validation
+  - pytest # tests
   - bioconda::snakemake # workflow management
   - bioconda::snakefmt # Snakefile formatting

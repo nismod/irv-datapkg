@@ -125,6 +125,37 @@ python scripts/record_zenodo_view_download_stats.py
 The script reads `records.csv` from the repository's `main` branch and writes
 the results to `stats.csv` in the current directory.
 
+### Catalogue client
+
+irv-datapkg publishes analysis-ready (T1) datasets as a static STAC catalogue
+under one base URI. See [`docs/catalogue-spec.md`](docs/catalogue-spec.md) for
+the contract and [`docs/adr`](docs/adr) for the decisions behind it. The
+`irv_datapkg.catalog` module and the `irv-datapkg` command read the catalogue
+from any fsspec root: a local path, `file://`, `s3://` or `https://`.
+
+```python
+from irv_datapkg.catalog import Catalog, extract
+
+cat = Catalog.open("s3://bucket/irv-datapkg", release="2026.1")
+items = cat.items("aqueduct_flood", hazard="river", rcp="4.5", return_period=100)
+cat.href(items[0])                   # /vsis3/... path for windowed reads with GDAL/rasterio
+cat.fetch(items[0], "input/")        # download, verify sha256, cache locally
+extract(items[0], "clip.tif", bbox=(-1.0, 50.0, 2.0, 53.0))
+```
+
+```bash
+irv-datapkg lock --base s3://bucket/irv-datapkg --release 2026.1 aqueduct_flood
+irv-datapkg fetch aqueduct_flood --lock datapkg.lock.yaml -p return_period=100 -o input/
+irv-datapkg extract gridfinder --lock datapkg.lock.yaml --geometry region.geojson -o extracts/
+irv-datapkg validate s3://bucket/irv-datapkg --check-files
+irv-datapkg release s3://bucket/irv-datapkg 2026.2 --from 2026.1 --pin aqueduct_flood=v2-r2
+```
+
+Private datasets are read from `{BASE}-private` using the same credentials. The
+download cache defaults to `~/.cache/irv-datapkg` (set `IRV_DATAPKG_CACHE` to
+change it). Producers write the catalogue with `build_collection`, `build_item`
+and `CatalogWriter` (`add_collection`, `add_item`, `release`).
+
 ### Development Notes
 
 In case of warnings about `GDAL_DATA` not being set, try running:

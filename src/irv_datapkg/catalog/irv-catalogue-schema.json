@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nismod/irv-datapkg/blob/main/src/irv_datapkg/catalog/irv-catalogue-schema.json",
+  "title": "irv-datapkg catalogue fields",
+  "description": "irv-specific requirements layered on STAC 1.0 documents. See docs/catalogue-spec.md. Validate a document against one of the $defs: collection, item, release, lock.",
+  "$defs": {
+    "dataset_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*-r[1-9][0-9]*$"},
+    "release_name": {"type": "string", "pattern": "^[0-9]{4}\\.[1-9][0-9]*$"},
+    "access": {"enum": ["public", "private"]},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "collection": {
+      "type": "object",
+      "required": ["type", "stac_version", "id", "description", "license", "extent", "links",
+                   "sci:citation", "irv:access", "irv:upstream_url", "irv:upstream_version",
+                   "irv:processing", "irv:dimensions", "irv:versions"],
+      "properties": {
+        "type": {"const": "Collection"},
+        "id": {"$ref": "#/$defs/dataset_id"},
+        "license": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$",
+                    "description": "SPDX identifier, or 'other'/'proprietary' with a license link"},
+        "sci:citation": {"type": "string", "minLength": 1},
+        "sci:doi": {"type": "string"},
+        "irv:access": {"$ref": "#/$defs/access"},
+        "irv:upstream_url": {"type": "string", "minLength": 1},
+        "irv:upstream_version": {"type": "string", "minLength": 1},
+        "irv:processing": {"type": "array", "items": {"type": "string"}},
+        "irv:dimensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "irv:versions": {"type": "array", "items": {"$ref": "#/$defs/version"}, "uniqueItems": true}
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["type", "stac_version", "id", "collection", "bbox", "geometry", "properties", "assets", "links"],
+      "properties": {
+        "type": {"const": "Feature"},
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+        "collection": {"$ref": "#/$defs/dataset_id"},
+        "properties": {
+          "type": "object",
+          "required": ["datetime", "irv:dataset", "irv:version"],
+          "properties": {
+            "irv:dataset": {"$ref": "#/$defs/dataset_id"},
+            "irv:version": {"$ref": "#/$defs/version"}
+          }
+        },
+        "assets": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"$ref": "#/$defs/asset"}
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["href", "type", "roles", "file:size", "file:checksum",
+                   "irv:source_url", "irv:retrieved", "irv:commit"],
+      "properties": {
+        "href": {"type": "string", "pattern": "^\\./[^/]+$",
+                 "description": "relative to the item: the file sits beside its item JSON"},
+        "roles": {"type": "array", "items": {"type": "string"}},
+        "file:size": {"type": "integer", "minimum": 0},
+        "file:checksum": {"type": "string", "pattern": "^1220[0-9a-f]{64}$",
+                          "description": "sha2-256 multihash (STAC file extension v2)"},
+        "irv:source_url": {"type": "string", "minLength": 1},
+        "irv:retrieved": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "irv:commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "raster:bands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "object", "required": ["nodata", "data_type", "unit"]}
+        }
+      },
+      "if": {"properties": {"type": {"pattern": "^image/tiff"}}, "required": ["type"]},
+      "then": {"required": ["raster:bands"]}
+    },
+    "release": {
+      "type": "object",
+      "required": ["type", "stac_version", "id", "links", "irv:release", "irv:datasets"],
+      "properties": {
+        "type": {"const": "Catalog"},
+        "irv:release": {"$ref": "#/$defs/release_name"},
+        "irv:datasets": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/dataset_id"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["version", "access"],
+            "properties": {
+              "version": {"$ref": "#/$defs/version"},
+              "access": {"$ref": "#/$defs/access"}
+            }
+          }
+        }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "required": ["lock_version", "base", "release", "datasets"],
+      "properties": {
+        "lock_version": {"const": 1},
+        "base": {"type": "string"},
+        "private_base": {"type": "string"},
+        "release": {"$ref": "#/$defs/release_name"},
+        "datasets": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/dataset_id"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["version", "access", "items"],
+            "properties": {
+              "version": {"$ref": "#/$defs/version"},
+              "access": {"$ref": "#/$defs/access"},
+              "items": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": ["href", "sha256", "size"],
+                    "properties": {"sha256": {"$ref": "#/$defs/sha256"}, "size": {"type": "integer"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
