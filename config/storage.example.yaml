@@ -1,0 +1,31 @@
+# Storage and publishing keys for rules/publish.smk (docs/storage.md).
+# Copy the keys you need into config.json, or pass this file with
+#   snakemake --configfile config/storage.example.yaml -c1 catalogue_publish_dry_run
+# Values marked ASSUMPTION need confirming with source.coop / Oxford IT.
+
+# Oxford drive working space: T0 raw downloads, builds, local catalogue, reports.
+# ASSUMPTION: mount point; replace with the real path of the project share.
+workspace_dir: /ouce-home/projects/irv-datapkg
+
+# Local catalogue roots (defaults shown). The private root is {catalogue_base}-private.
+catalogue_base: /ouce-home/projects/irv-datapkg/catalogue/irv-datapkg
+catalogue_private_base: /ouce-home/projects/irv-datapkg/catalogue/irv-datapkg-private
+
+# Remote public base. ASSUMPTION: source.coop account "nismod", repository
+# "irv-datapkg", addressed through the source.coop data proxy as
+# s3://{account}/{repository} with endpoint_url https://data.source.coop.
+publish_remote: s3://nismod/irv-datapkg
+
+# Remote private base (default {publish_remote}-private). ASSUMPTION: a second,
+# private source.coop repository "irv-datapkg-private" in the same account.
+publish_private_remote: s3://nismod/irv-datapkg-private
+
+# Publish the private root too. Set false to publish only the public root.
+publish_private: true
+
+# fsspec / s3fs options for the remote. Credentials come from the environment
+# (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN) or an AWS
+# profile, never from this file.
+publish_storage_options:
+  endpoint_url: https://data.source.coop
+  # profile: source-coop

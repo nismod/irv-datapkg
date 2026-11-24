@@ -1,0 +1,63 @@
+# Monthly check that upstream data sources in docs/datasets.csv are reachable
+# (ADR 0002, docs/storage.md). Needs no secrets: HEAD/GET requests only.
+name: linkcheck
+
+on:
+  schedule:
+    - cron: "17 6 1 * *" # 06:17 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linkcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install irv-datapkg
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Check upstream URLs
+        id: check
+        run: |
+          irv-datapkg linkcheck \
+            --datasets-csv docs/datasets.csv \
+            --output linkcheck-report.csv \
+            --timeout 60 \
+            --fail-on-error
+
+      - name: Summarise failures
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv, os
+          if not os.path.exists("linkcheck-report.csv"):
+              print("No report was written.")
+              raise SystemExit
+          rows = list(csv.DictReader(open("linkcheck-report.csv")))
+          bad = [r for r in rows if r["ok"] == "false"]
+          skipped = [r for r in rows if r["ok"] == ""]
+          print(f"## Upstream link check\n\n{len(rows) - len(bad) - len(skipped)} ok, "
+                f"{len(bad)} failed, {len(skipped)} skipped (not a URL)\n")
+          if bad:
+              print("| dataset | url | status / error |\n| --- | --- | --- |")
+              for r in bad:
+                  print(f"| {r['dataset']} | {r['url']} | {r['status'] or r['error']} |")
+          PY
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkcheck-report
+          path: linkcheck-report.csv
+          retention-days: 90
