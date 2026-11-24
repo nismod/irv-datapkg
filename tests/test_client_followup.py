@@ -544,3 +544,15 @@ def test_cli_retire_mark(work):
     assert coll["irv:retired"]["v1-r1"]["date"] == "2027-07-01"
     r = runner.invoke(main, ["retire", str(base), "--mark", "flood=v2-r1", "--note", "x"])
     assert r.exit_code != 0 and "latest" in r.output
+
+
+def test_numeric_filter_values_match_across_forms():
+    from irv_datapkg.catalog.lock import matches
+
+    assert matches({"return_period": 100}, {"return_period": "100.0"})
+    assert matches({"return_period": "100"}, {"return_period": 100})
+    assert matches({"epoch": 2030}, {"epoch": ["2050", "2030"]})
+    assert not matches({"return_period": 100}, {"return_period": "1000"})
+    assert matches({"rcp": "4.5"}, {"rcp": 4.5})
+    assert not matches({"gcm": "a"}, {"gcm": "b"})
+    assert matches({"flag": True}, {"flag": "True"})

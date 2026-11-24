@@ -2,6 +2,9 @@
 
 ## Unreleased (planned 0.3.0)
 
+- Item property filters compare numbers numerically, so `100`, `"100"` and
+  `100.0` match each other.
+
 ### Added: catalogue client and producer (`irv_datapkg.catalog`, WP1)
 
 - Static STAC catalogue contract (`docs/catalogue-spec.md`, JSON Schema in

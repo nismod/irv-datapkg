@@ -52,9 +52,10 @@ def _options(wanted) -> list:
 def matches(properties: dict, filters: dict) -> bool:
     """True if ``properties`` match every filter.
 
-    A filter value is a scalar or a list of accepted values, compared as
-    strings (``100`` matches ``"100"``). ``None`` or :data:`ABSENT` among the
-    accepted values matches a property that is absent or null.
+    A filter value is a scalar or a list of accepted values. Values are
+    compared numerically when both sides read as numbers (``100``, ``"100"``
+    and ``100.0`` all match), otherwise as strings. ``None`` or :data:`ABSENT`
+    among the accepted values matches a property that is absent or null.
     """
     for key, wanted in filters.items():
         options = _options(wanted)
@@ -63,9 +64,21 @@ def matches(properties: dict, filters: dict) -> bool:
             if any(o is None or o is ABSENT for o in options):
                 continue
             return False
-        if str(value) not in {str(o) for o in options if o is not None and o is not ABSENT}:
+        accepted = {_normal(o) for o in options if o is not None and o is not ABSENT}
+        if _normal(value) not in accepted:
             return False
     return True
+
+
+def _normal(value):
+    """Comparison key: a float for anything that reads as a finite number, else a string."""
+    if isinstance(value, bool):
+        return str(value)
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return number if number == number and abs(number) != float("inf") else str(value)
 
 
 def _resolve_location(location: Optional[str], lock_dir: str) -> Optional[str]:
