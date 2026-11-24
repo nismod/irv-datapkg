@@ -15,3 +15,5 @@ Status: accepted
 - Publish the list of cells with bbox and boundary geometry
   (`{BASE}/partitions/{scheme}/cells.parquet`) as catalogue metadata.
 - Review prior art before writing the method.
+
+Implementation: `packages/adaptive-partitions/` (see its README and `docs/prior-art.md`).
