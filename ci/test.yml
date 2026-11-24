@@ -1,0 +1,102 @@
+# Proposed replacement for .github/workflows/test.yml (see ci/README.md).
+#
+# Jobs:
+#   test  unit tests on the oldest and newest supported Python (no Snakemake runs)
+#   e2e   synthetic T0 -> T1 Snakemake run, deep validation, release, publish to a
+#         file:// remote, audit, consumer lock + fetch (pytest -m e2e; docs/qa.md)
+#   lint  flake8 (as before), black and snakefmt checks, snakemake --lint and dry runs
+#
+# Nothing here downloads datasets: every test builds tiny synthetic files, and the
+# STAC schemas used by validate --deep are bundled in the package.
+name: test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # dummy values: the Snakefile declares these envvars, nothing here uses them
+  ZENODO_TOKEN: x
+  CDSAPI_URL: https://cds.invalid
+  CDSAPI_KEY: x
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # See https://devguide.python.org/versions/
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # hatch-vcs needs tags for the version
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install '.[dev]'
+      - name: Unit tests
+        run: pytest -m "not e2e" --cov=irv_datapkg --cov-report=term
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install '.[dev]' 'snakemake>=8'
+      - name: End-to-end synthetic release
+        run: pytest -m e2e -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # snakefmt 2.x formats shell blocks with shfmt (shfmt-py is a dependency)
+          pip install '.[dev]' 'snakemake>=8' 'snakefmt==2.1.0' 'black>=26.3.1,<27'
+      - name: flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: black
+        # line length and legacy exclusions are in pyproject.toml [tool.black];
+        # packages/adaptive-partitions has its own conventions
+        run: black --check --diff src tests scripts
+      - name: snakefmt
+        # rules/zenodo.smk is legacy and not yet snakefmt-clean (see ci/README.md)
+        run: snakefmt --check --diff Snakefile $(ls rules/*.smk | grep -v zenodo.smk)
+      - name: snakemake --lint (advisory)
+        # many existing rules have advisory lints (no log:, long run:), so this
+        # reports them in the job log without failing the build
+        run: snakemake --lint || echo "::warning::snakemake --lint reported lints"
+      - name: Dry runs
+        run: |
+          snakemake -n all_t1
+          snakemake -n data/JAM/datapackage.json

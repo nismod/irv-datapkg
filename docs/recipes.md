@@ -35,7 +35,7 @@ export ZENODO_TOKEN=x CDSAPI_URL=x CDSAPI_KEY=x     # dummy values are fine unle
 snakemake -n all_t1_storm_fixed_rp                  # dry run: one dataset's T1
 snakemake -n all_t1                                 # dry run: every dataset's T1
 snakemake -c 8 all_t1_storm_fixed_rp                # build and register T1
-irv-datapkg validate workspace/catalogue --check-files
+irv-datapkg validate workspace/catalogue --check-files   # or --deep (docs/qa.md)
 snakemake -n data/JAM/datapackage.json              # one T2 country package
 snakemake -n all                                    # every country package
 ```
@@ -79,9 +79,9 @@ workflow.
    parsing function maps upstream file names to properties, test it on real names
    from the upstream listing.
 5. **Build on the production machine.** `snakemake -c N all_t1_<dataset>` then
-   `irv-datapkg validate {catalogue_base} --check-files`. Spot-check one item:
-   `rio cogeo validate` (or `recipes.is_cog`), grid identical to the source,
-   nodata, units, and the item properties.
+   `irv-datapkg validate {catalogue_base} --deep -d <dataset>` (STAC schemas,
+   COG/GeoParquet profile, declared nodata, sha256; docs/qa.md). Spot-check one
+   item by hand: grid identical to the source, units, and the item properties.
 6. **T2 (only if `t2.enabled`).** `snakemake -c N data/JAM/datapackage.json` and
    compare with the previous package. Then the Zenodo flow is unchanged
    (`all`, `all_uploaded`, `all_published`).
@@ -165,7 +165,8 @@ Migrate <dataset_id> to a T0/T1(/T2) recipe
 - [ ] metadata/<package>.yml with collections: and t2:
 - [ ] rules/<dataset_id>.smk: items, T0 with provenance, T1 standardise; included in Snakefile
 - [ ] dry run: snakemake -n all_t1_<dataset_id>; snakemake --lint; snakefmt --check; pytest
-- [ ] production: snakemake all_t1_<dataset_id>; irv-datapkg validate --check-files
+- [ ] production: snakemake all_t1_<dataset_id>; irv-datapkg validate --deep -d <dataset_id>
 - [ ] spot checks: COG/GeoParquet profile, grid unchanged, nodata, units, properties
 - [ ] consumers: note the item filters open-gira / infra-risk-vis will use
+- [ ] docs/deprecation.md: Recipe column; the consumer rules this replaces
 ```

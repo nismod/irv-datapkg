@@ -2,6 +2,31 @@
 
 ## Unreleased (planned 0.3.0)
 
+### Added: QA, CI and deprecation plan (WP14)
+
+- `validate_catalog(deep=True, sample=, seed=, datasets=, warnings=)` and
+  `irv-datapkg validate --deep [--sample N --seed S] [-d DATASET] [--strict]`:
+  STAC 1.0.0 core + extension schema validation with bundled schemas
+  (`catalog/stac_schemas/`, works offline; unbundled extensions are fetched
+  or skipped with a warning), COG checks (rio-cogeo validator, compression,
+  tiling, overviews, declared nodata and data type), GeoParquet checks
+  (version, EPSG:4326, `covering.bbox`, geometry types, row groups, row
+  count) and sha256. `validate` also takes remote options (`-S`,
+  `--endpoint-url`, `--profile`, `--anon`). See docs/qa.md.
+- `irv-datapkg audit BASE|LOCK [--sample N] [--release R] [-d DATASET] [-j N] [-o CSV]`
+  re-hashes assets (local or remote, or a lock file's assets against its base
+  or `--base MIRROR`) and reports mismatched, missing and unreadable files
+  (`irv_datapkg.catalog.qa.audit`).
+- `all_t1` and `catalogue_publish` deep-validate with `--config validate_deep=true`.
+- `qa` extra (`rio-cogeo`); `dev` now includes rio-cogeo and black.
+  `[tool.black]` (100 columns) and `[tool.snakefmt]` (88) in pyproject.toml.
+- `pytest -m e2e` (tests/test_e2e.py): synthetic T0 -> T1 Snakemake run, deep
+  validation, release, publish to `file://`, audit, consumer lock and fetch.
+- CI proposals in `ci/` (copy to `.github/workflows/`, see ci/README.md):
+  `test.yml` (unit, e2e, lint jobs) and `linkcheck.yml`.
+- docs/deprecation.md: every consumer download rule, the dataset replacing
+  it, and when it may be removed.
+
 - Item property filters compare numbers numerically, so `100`, `"100"` and
   `100.0` match each other.
 
