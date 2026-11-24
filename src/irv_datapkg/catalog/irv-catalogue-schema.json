@@ -26,7 +26,21 @@
         "irv:upstream_version": {"type": "string", "minLength": 1},
         "irv:processing": {"type": "array", "items": {"type": "string"}},
         "irv:dimensions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "irv:versions": {"type": "array", "items": {"$ref": "#/$defs/version"}, "uniqueItems": true}
+        "irv:versions": {"type": "array", "items": {"$ref": "#/$defs/version"}, "uniqueItems": true},
+        "irv:retired": {
+          "type": "object",
+          "description": "Versions whose files moved to cold storage: version -> {date, note, location}",
+          "propertyNames": {"$ref": "#/$defs/version"},
+          "additionalProperties": {
+            "type": "object",
+            "required": ["date"],
+            "properties": {
+              "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+              "note": {"type": "string"},
+              "location": {"type": "string"}
+            }
+          }
+        }
       }
     },
     "item": {
@@ -63,6 +77,8 @@
         "file:checksum": {"type": "string", "pattern": "^1220[0-9a-f]{64}$",
                           "description": "sha2-256 multihash (STAC file extension v2)"},
         "irv:source_url": {"type": "string", "minLength": 1},
+        "irv:source_filename": {"type": "string", "pattern": "^[^/]+$",
+                                "description": "upstream file name, e.g. for naming fetched files as upstream did"},
         "irv:retrieved": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
         "irv:commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
         "raster:bands": {
@@ -99,8 +115,9 @@
       "required": ["lock_version", "base", "release", "datasets"],
       "properties": {
         "lock_version": {"const": 1},
-        "base": {"type": "string"},
-        "private_base": {"type": "string"},
+        "base": {"type": "string", "minLength": 1,
+                 "description": "as given: URL, absolute path, or path relative to the lock file"},
+        "private_base": {"type": "string", "minLength": 1},
         "release": {"$ref": "#/$defs/release_name"},
         "datasets": {
           "type": "object",
@@ -118,9 +135,20 @@
                   "additionalProperties": {
                     "type": "object",
                     "required": ["href", "sha256", "size"],
-                    "properties": {"sha256": {"$ref": "#/$defs/sha256"}, "size": {"type": "integer"}}
+                    "properties": {
+                      "href": {"type": "string", "pattern": "^(?!/)(?!.*://).+$",
+                               "description": "relative to base (public) or private_base (private)"},
+                      "sha256": {"$ref": "#/$defs/sha256"},
+                      "size": {"type": "integer"},
+                      "source_filename": {"type": "string"}
+                    }
                   }
                 }
+              },
+              "properties": {
+                "type": "object",
+                "description": "item id -> the collection's irv:dimensions values (null if absent)",
+                "additionalProperties": {"type": "object"}
               }
             }
           }

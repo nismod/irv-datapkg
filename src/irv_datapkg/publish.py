@@ -54,7 +54,9 @@ class Action:
     access: str  # "public" or "private"
     path: str  # path relative to the root
     tier: int
-    action: str  # "upload" (new), "update" (mutable, changed), "skip" (identical), "conflict"
+    # "upload" (new), "update" (mutable, changed), "skip" (identical), "conflict",
+    # "retired" (data file of a retired version, not on the remote: not re-uploaded)
+    action: str
     size: int
     reason: str = ""
 
@@ -83,7 +85,9 @@ class Summary:
         return {
             "dry_run": self.dry_run,
             "roots": {k: {"local": v[0], "remote": v[1]} for k, v in self.roots.items()},
-            "counts": {a: self.count(a) for a in ("upload", "update", "skip", "conflict")},
+            "counts": {
+                a: self.count(a) for a in ("upload", "update", "skip", "conflict", "retired")
+            },
             "bytes": {a: self.bytes(a) for a in ("upload", "update")},
             "actions": [
                 {**asdict(a), "tier": a.tier_name} for a in self.actions if a.action != "skip"
@@ -103,6 +107,11 @@ class Summary:
             f"{verb} upload {self.count('upload')} new ({_human(self.bytes('upload'))}), "
             f"update {self.count('update')} mutable ({_human(self.bytes('update'))}), "
             f"skip {self.count('skip')} identical; {self.count('conflict')} conflicts"
+            + (
+                f"; {self.count('retired')} retired files not re-uploaded"
+                if self.count("retired")
+                else ""
+            )
         )
         return "\n".join(lines)
 
@@ -170,6 +179,17 @@ def _check_access(local: str, access: str, storage_options: Optional[dict], file
                 )
 
 
+def _retired_versions(local: str, files: dict, storage_options) -> set:
+    """{(dataset, version)} listed in the local collections' ``irv:retired``."""
+    out = set()
+    for rel in files:
+        if classify(rel) == COLLECTION:
+            coll = _fs.read_json(_fs.join(local, rel), storage_options)
+            for version in coll.get("irv:retired") or {}:
+                out.add((rel.split("/")[0], version))
+    return out
+
+
 def _item_checksums(local: str, files: dict, storage_options) -> dict:
     """{data relpath: (item relpath, sha256 hex)} from the local item JSON."""
     out = {}
@@ -208,6 +228,7 @@ def plan_root(
     _check_access(local, access, local_options, local_files)
     remote_files = _list(remote, remote_options)
     checksums = _item_checksums(local, local_files, local_options)
+    retired = _retired_versions(local, local_files, local_options)
     local_hash, actions = {}, []
 
     def lhash(rel):
@@ -233,7 +254,16 @@ def plan_root(
     for rel in sorted(local_files, key=lambda r: (classify(r), r)):
         tier, size = classify(rel), local_files[rel]
         mutable = tier in MUTABLE_TIERS
-        if rel not in remote_files:
+        parts = rel.split("/")
+        if (
+            rel not in remote_files
+            and tier == DATA
+            and len(parts) >= 3
+            and (parts[0], parts[1]) in retired
+        ):
+            # files of a retired version left on the local drive are not re-published
+            actions.append(Action(access, rel, tier, "retired", size, "version is retired"))
+        elif rel not in remote_files:
             actions.append(Action(access, rel, tier, "upload", size))
         elif remote_files[rel] == size and same_bytes(rel):
             actions.append(Action(access, rel, tier, "skip", size))
@@ -341,6 +371,7 @@ RETIRE_FIELDS = [
     "dataset",
     "access",
     "version",
+    "retired",
     "latest",
     "pinned_by",
     "last_pinned",
@@ -377,6 +408,9 @@ def retire_report(
     - it is not pinned by any release created within ``keep_days`` of ``now``;
     - its newest asset ``irv:retrieved`` date is more than ``keep_days`` ago
       (a grace period for versions superseded before any release pinned them).
+
+    Versions already in the collection's ``irv:retired`` are reported with
+    their retirement date and are not eligible.
     """
     so = storage_options or {}
     now = now or dt.date.today()
@@ -428,7 +462,10 @@ def retire_report(
                 pinned = [r for r in releases if r[2].get(coll["id"]) == v]
                 last = max((r[1] for r in pinned if r[1]), default=None)
                 s = stats[v]
-                if versions and v == versions[-1]:
+                retired = (coll.get("irv:retired") or {}).get(v)
+                if retired:
+                    eligible, reason = False, f"retired {retired.get('date')}"
+                elif versions and v == versions[-1]:
                     eligible, reason = False, "latest version"
                 elif newest and newest[2].get(coll["id"]) == v:
                     eligible, reason = False, f"pinned by most recent release {newest[0]}"
@@ -446,6 +483,7 @@ def retire_report(
                         "dataset": coll["id"],
                         "access": access,
                         "version": v,
+                        "retired": (retired or {}).get("date", ""),
                         "latest": v == versions[-1],
                         "pinned_by": ";".join(r[0] for r in pinned),
                         "last_pinned": last.isoformat() if last else "",

@@ -140,12 +140,24 @@ cat = Catalog.open("s3://bucket/irv-datapkg", release="2026.1")
 items = cat.items("aqueduct_flood", hazard="river", rcp="4.5", return_period=100)
 cat.href(items[0])                   # /vsis3/... path for windowed reads with GDAL/rasterio
 cat.fetch(items[0], "input/")        # download, verify sha256, cache locally
+cat.fetch(items[0], "input/a.tif", link="hardlink")  # no second copy on disk
+cat.fetch(items[0], "input/a.tif", cache=False)      # stream straight to dest
+cat.items("aqueduct_flood", gcm=Catalog.ABSENT, strict=True)  # property absent/null
+items[0].asset.source_filename       # upstream file name (irv:source_filename)
 extract(items[0], "clip.tif", bbox=(-1.0, 50.0, 2.0, 53.0))
+
+# lock only what you use, check it, and fetch from it (also from a mirror)
+cat.write_lock("datapkg.lock.yaml", select={"aqueduct_flood": {"return_period": [100, 1000]}})
+assert cat.lock_matches("datapkg.lock.yaml", datasets=["aqueduct_flood"])
+locked = Catalog.from_lock("datapkg.lock.yaml", base="/mnt/mirror/irv-datapkg")
+locked.fetch_locked("aqueduct_flood", "inunriver_rcp4p5_gfdl_2050_rp0100", "input/")
 ```
 
 ```bash
 irv-datapkg lock --base s3://bucket/irv-datapkg --release 2026.1 aqueduct_flood
-irv-datapkg fetch aqueduct_flood --lock datapkg.lock.yaml -p return_period=100 -o input/
+irv-datapkg lock --base s3://bucket/irv-datapkg --release 2026.1 -p aqueduct_flood:return_period=100
+irv-datapkg lock --base s3://bucket/irv-datapkg --release 2026.1 aqueduct_flood --check
+irv-datapkg fetch aqueduct_flood --lock datapkg.lock.yaml -p return_period=100 -o input/ --link hardlink
 irv-datapkg extract gridfinder --lock datapkg.lock.yaml --geometry region.geojson -o extracts/
 irv-datapkg validate s3://bucket/irv-datapkg --check-files
 irv-datapkg release s3://bucket/irv-datapkg 2026.2 --from 2026.1 --pin aqueduct_flood=v2-r2
@@ -154,7 +166,7 @@ irv-datapkg release s3://bucket/irv-datapkg 2026.2 --from 2026.1 --pin aqueduct_
 Private datasets are read from `{BASE}-private` using the same credentials. The
 download cache defaults to `~/.cache/irv-datapkg` (set `IRV_DATAPKG_CACHE` to
 change it). Producers write the catalogue with `build_collection`, `build_item`
-and `CatalogWriter` (`add_collection`, `add_item`, `release`).
+and `CatalogWriter` (`add_collection`, `add_item`, `release`, `retire`).
 
 The client installs without GDAL Python bindings (`pip install irv-datapkg`).
 The producer workflow also needs `pip install irv-datapkg[producer]`, or GDAL

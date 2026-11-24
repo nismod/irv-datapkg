@@ -99,6 +99,7 @@ def test_fetch_verifies_and_caches(cat, tmp_path):
     assert cached.read_bytes() == Path(asset.href).read_bytes()
     assert _fs.sha256_file(str(out)) == asset.sha256
     # a corrupted cache entry is re-downloaded
+    cached.chmod(0o644)  # cache entries are read-only
     cached.write_bytes(b"junk")
     assert _fs.sha256_file(str(cat.fetch(asset))) == asset.sha256
     # a checksum mismatch at the source is an error

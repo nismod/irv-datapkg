@@ -57,8 +57,10 @@ Everything lives under one base URI `{BASE}`: a local path, `file://`, `s3://`,
   identical content is a no-op. Fixes go out as a new revision.
 - Once a release pins a version, that version is **sealed**: no new items can
   be added to it either.
-- `collection.json` is the only mutable per-dataset document. It gains links
-  and versions as versions are added. `irv:versions` lists versions oldest
+- A version whose files have moved to cold storage is listed in the
+  collection's `irv:retired` (section 7). Its item JSON stays.
+- `collection.json` is the only mutable per-dataset document. It gains links,
+  versions and retirements as they happen. `irv:versions` lists versions oldest
   first, and the last one is "latest".
 
 ## 3. Collection (`{dataset}/collection.json`)
@@ -75,6 +77,7 @@ Required in addition to STAC Collection fields:
 | `irv:processing` | Ordered list of processing steps, in plain words |
 | `irv:dimensions` | Names of item properties that distinguish variants. Every item MUST have them |
 | `irv:versions` | Published versions, oldest first |
+| `irv:retired` | Optional. Versions whose files are in cold storage: `{version: {"date": "YYYY-MM-DD", "note": ..., "location": ...}}` (section 7) |
 
 ```json
 {
@@ -117,6 +120,7 @@ Each asset (role `data` for the primary file) MUST have:
 | `irv:source_url` | Upstream URL of the T0 file(s) it was derived from |
 | `irv:retrieved` | Retrieval date `YYYY-MM-DD` |
 | `irv:commit` | irv-datapkg git commit that produced it (7-40 hex) |
+| `irv:source_filename` | Optional. Upstream file name, e.g. `inunriver_rcp4p5_0000GFDL-ESM2M_2050_rp00100.tif`. `build_item` sets it to the basename of `irv:source_url` when that looks like a file; pass `source_filename=` otherwise. Consumers use it to name fetched files as the upstream did |
 | `raster:bands` | Rasters only: each band has `nodata`, `data_type` and `unit` (`null` if unitless), plus `scale`/`offset` |
 
 Vector assets carry `table:row_count`, `table:columns` and `table:primary_geometry`.
@@ -137,6 +141,7 @@ Vector assets carry `table:row_count`, `table:columns` and `table:primary_geomet
       "type": "image/tiff; application=geotiff; profile=cloud-optimized", "roles": ["data"],
       "file:size": 123456789, "file:checksum": "1220ab12...",
       "irv:source_url": "http://wri-projects.s3.amazonaws.com/AqueductFloodTool/download/v2/inunriver_rcp4p5_0000GFDL-ESM2M_2050_rp00100.tif",
+      "irv:source_filename": "inunriver_rcp4p5_0000GFDL-ESM2M_2050_rp00100.tif",
       "irv:retrieved": "2025-06-01", "irv:commit": "879cd80",
       "raster:bands": [{"data_type": "float32", "nodata": -9999, "unit": "m", "scale": 1.0, "offset": 0.0}]
     }
@@ -169,7 +174,8 @@ Releases are immutable. They are made every six months, or more often when neede
 
 - `irv:datasets` is authoritative. `child` links are there for STAC browsers and
   exist only for public datasets.
-- Every pinned version MUST be in that collection's `irv:versions`.
+- Every pinned version MUST be in that collection's `irv:versions`. A new
+  release MUST NOT pin a retired version (old releases that pin it stay valid).
 - The root catalogue links each release with `rel: "irv:release"`.
 - `irv-datapkg release BASE 2026.2 --from 2026.1 --pin aqueduct_flood=v2-r2`
   starts from the previous release's pins. Without `--from`, every dataset is
@@ -179,13 +185,13 @@ Releases are immutable. They are made every six months, or more often when neede
 
 Consumers (open-gira, infra-risk-vis) commit a lock file and never follow
 "latest". The lock file records the release and, for each dataset used, the
-pinned version and every asset's checksum. The client refuses an item whose
-checksum differs from the lock file.
+pinned version and every locked asset's location and checksum. The client
+refuses an item whose checksum differs from the lock file.
 
 ```yaml
 lock_version: 1
-base: s3://example-bucket/irv-datapkg
-private_base: s3://example-bucket/irv-datapkg-private
+base: s3://example-bucket/irv-datapkg       # as given: URL, absolute path, or relative path
+private_base: s3://example-bucket/irv-datapkg-private   # only if not {base}-private
 release: '2026.1'
 datasets:
   aqueduct_flood:
@@ -197,7 +203,50 @@ datasets:
           href: aqueduct_flood/v2-r1/inunriver_rcp4p5_gfdl_2050_rp0100.tif   # relative to base (or private_base)
           sha256: ab12...
           size: 123456789
+          source_filename: inunriver_rcp4p5_0000GFDL-ESM2M_2050_rp00100.tif   # optional
+    properties:              # optional: each item's irv:dimensions values (null if absent)
+      inunriver_rcp4p5_gfdl_2050_rp0100: {hazard: river, rcp: '4.5', gcm: gfdl, epoch: 2050, return_period: 100}
 ```
 
+- `base` and `private_base` are recorded as given. A relative local path is
+  relative to the lock file's directory; `file://` URLs are kept. When
+  `private_base` is absent it is `{base}-private`.
+- Asset `href`s are relative to the base, so a lock works unchanged against a
+  mirror: `Catalog.from_lock(path, base=MIRROR)` (private base then
+  `MIRROR-private` unless `private_base=` is given), or `--lock ... --base MIRROR`.
+- A lock MAY list only some items of a dataset (`write_lock(select=...)`,
+  `irv-datapkg lock --item DATASET/ID` or `-p DATASET:KEY=VALUE`). A catalogue
+  opened from a lock lists only the locked items.
+- A locked asset can be fetched from its entry alone, with no STAC reads
+  (`Catalog.fetch_locked`, `irv-datapkg fetch --lock`); `properties` lets
+  the client select items by dimension without reading item JSON.
+- Older lock files (absolute `base`, always a `private_base`, no
+  `properties`/`source_filename`) remain valid.
+
 Create it with `irv-datapkg lock --base {BASE} --release 2026.1 aqueduct_flood ...`,
-and read it with `Catalog.from_lock("datapkg.lock.yaml")` or `--lock` on any CLI command.
+check it with `irv-datapkg lock ... --check` (or `Catalog.lock_matches`), and
+read it with `Catalog.from_lock("datapkg.lock.yaml")` or `--lock` on any CLI command.
+
+## 7. Retired versions
+
+A version's files may move to cold storage (docs/storage.md section 6). The
+collection then records it:
+
+```json
+"irv:retired": {
+  "v1-r1": {"date": "2027-07-01", "note": "On Oxford tape; ask irv-datapkg maintainers to restore", "location": "tape LTO-0042"}
+}
+```
+
+- Every key MUST be in `irv:versions`. `date` is required; `note` and
+  `location` are free text.
+- The version's item JSON and its `irv:versions` entry stay, so citations and
+  old release manifests still resolve to metadata. Its asset files MAY be
+  missing; `validate` does not report them.
+- Clients MUST refuse to fetch (or hand out GDAL paths for) a retired version
+  with an error that gives the date and note, and lock files MUST NOT be
+  written for it. `CatalogWriter` refuses to add items to it or pin it in a
+  new release.
+- Mark with `CatalogWriter.retire(dataset, version, note)` or
+  `irv-datapkg retire BASE --mark DATASET=VERSION --note ...`. After a
+  restore, `CatalogWriter.unretire` removes the entry.

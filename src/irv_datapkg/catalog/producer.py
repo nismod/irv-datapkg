@@ -129,11 +129,14 @@ def build_item(
     nodata=None,
     title: Optional[str] = None,
     asset_key: str = "data",
+    source_filename: Optional[str] = None,
 ) -> dict:
     """Build a STAC item dict for a local COG or GeoParquet file.
 
     ``properties`` holds the variant dimensions (hazard, rcp, epoch, gcm,
     return_period, ...). Computes size and sha256 of the file.
+    ``source_filename`` (``irv:source_filename``) is the upstream file name;
+    it defaults to the basename of ``source_url`` if that looks like a file.
     """
     _check(DATASET_RE, dataset, "dataset id")
     _check(VERSION_RE, version, "version")
@@ -173,6 +176,11 @@ def build_item(
         "irv:commit": commit,
         **meta["asset"],
     }
+    source_filename = source_filename or _fs.source_filename(source_url)
+    if source_filename:
+        if "/" in source_filename:
+            raise ValueError(f"source_filename must be a file name, not {source_filename!r}")
+        asset["irv:source_filename"] = source_filename
     if title:
         asset["title"] = title
     return {
@@ -293,7 +301,8 @@ class CatalogWriter:
         raise FileNotFoundError(f"No collection {dataset}: call add_collection first")
 
     def add_collection(self, collection: dict) -> str:
-        """Create a collection, or update its metadata keeping links, versions and extent."""
+        """Create a collection, or update its metadata keeping links, versions,
+        extent and retirements."""
         access = collection["irv:access"]
         root_url = self._ensure_root(access)
         url = _fs.join(self._root(access), collection["id"], "collection.json")
@@ -311,6 +320,8 @@ class CatalogWriter:
             old = self._read(url)
             for key in ("links", "irv:versions", "extent"):
                 collection[key] = old[key]
+            if old.get("irv:retired"):
+                collection["irv:retired"] = old["irv:retired"]
         collection["links"] = list(collection.get("links", []))
         self._add_link(
             collection, {"rel": "root", "href": "../catalog.json", "type": "application/json"}
@@ -355,6 +366,8 @@ class CatalogWriter:
             old = self._read(item_url)
             if old != item:
                 raise ImmutableError(f"{item_url} exists with different content")
+        elif version in (self._read(coll_url).get("irv:retired") or {}):
+            raise ImmutableError(f"{dataset} {version} is retired; publish a new version instead")
         elif self._released(dataset, version):
             raise ImmutableError(
                 f"{dataset} {version} is pinned by a release; publish a new version instead"
@@ -390,6 +403,71 @@ class CatalogWriter:
             spatial[0] = _union(spatial[0], item["bbox"])
         self._write(coll_url, collection)
         return item_url
+
+    def retire(
+        self,
+        dataset: str,
+        version: str,
+        note: str,
+        date: Union[str, dt.date, None] = None,
+        location: Optional[str] = None,
+        force: bool = False,
+    ) -> str:
+        """Mark ``dataset`` ``version`` as retired to cold storage in
+        ``collection.json`` (``irv:retired``). Item JSON and ``irv:versions``
+        stay, so metadata and old releases still resolve; clients refuse to
+        fetch its files. Data files are not deleted here (docs/storage.md
+        section 6). Refuses the latest version, and a version pinned by the
+        most recent release, unless ``force``. Returns the collection URL."""
+        coll_url = self._find_collection(dataset)
+        coll = self._read(coll_url)
+        versions = coll.get("irv:versions", [])
+        if version not in versions:
+            raise ValueError(f"{dataset} has no published version {version}")
+        if not note:
+            raise ValueError("give a note: where the files are and how to ask for a restore")
+        if not force:
+            if version == versions[-1]:
+                raise ValueError(f"{dataset} {version} is the latest version")
+            newest = self._newest_release()
+            if newest and newest[1].get(dataset, {}).get("version") == version:
+                raise ValueError(
+                    f"{dataset} {version} is pinned by the most recent release {newest[0]}"
+                )
+        if isinstance(date, (dt.date, dt.datetime)):
+            date = date.strftime("%Y-%m-%d")
+        entry = {"date": date or dt.date.today().isoformat(), "note": note}
+        if location:
+            entry["location"] = location
+        retired = dict(coll.get("irv:retired") or {})
+        retired[version] = entry
+        coll["irv:retired"] = {v: retired[v] for v in versions if v in retired}
+        self._write(coll_url, coll)
+        return coll_url
+
+    def unretire(self, dataset: str, version: str) -> str:
+        """Remove the ``irv:retired`` mark after restoring a version's files."""
+        coll_url = self._find_collection(dataset)
+        coll = self._read(coll_url)
+        retired = dict(coll.get("irv:retired") or {})
+        if retired.pop(version, None) is None:
+            raise ValueError(f"{dataset} {version} is not retired")
+        if retired:
+            coll["irv:retired"] = retired
+        else:
+            coll.pop("irv:retired", None)
+        self._write(coll_url, coll)
+        return coll_url
+
+    def _newest_release(self):
+        """(name, irv:datasets) of the most recently created release, or None."""
+        newest = None
+        for name in self.releases():
+            manifest = self._read(_fs.join(self.base, "releases", name, "catalog.json"))
+            key = (manifest.get("irv:created") or "", name)
+            if newest is None or key > newest[0]:
+                newest = (key, name, manifest.get("irv:datasets", {}))
+        return (newest[1], newest[2]) if newest else None
 
     def _released(self, dataset: str, version: str) -> bool:
         """True if any release pins ``dataset`` at ``version`` (the version is then sealed)."""
@@ -452,6 +530,12 @@ class CatalogWriter:
             coll = self._read(coll_url)
             if version not in coll["irv:versions"]:
                 raise ValueError(f"{dataset} has no published version {version}")
+            retired = (coll.get("irv:retired") or {}).get(version)
+            if retired:
+                raise ValueError(
+                    f"{dataset} {version} was retired on {retired.get('date')}: "
+                    f"pin a newer version (--pin {dataset}=...) or restore it first"
+                )
             datasets[dataset] = {"version": version, "access": coll["irv:access"]}
             if coll["irv:access"] == "public":
                 links.append(

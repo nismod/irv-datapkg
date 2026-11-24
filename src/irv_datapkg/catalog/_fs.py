@@ -9,7 +9,9 @@ import hashlib
 import json
 import os
 import posixpath
+import re
 from typing import Any, Optional
+from urllib.parse import unquote, urlsplit
 
 import fsspec
 
@@ -24,6 +26,12 @@ def normalise(location: str) -> str:
     if "://" not in location:
         return os.path.abspath(location)
     return location.rstrip("/") if not location.endswith("://") else location
+
+
+def is_relative_local(location: str) -> bool:
+    """True for a relative local path (no protocol, not absolute)."""
+    location = str(location)
+    return "://" not in location and not os.path.isabs(location)
 
 
 def split(location: str) -> tuple:
@@ -54,6 +62,21 @@ def relative(target: str, start_doc: str) -> str:
     _, s = split(start_doc)
     rel = posixpath.relpath(t, posixpath.dirname(s))
     return rel if rel.startswith(".") else "./" + rel
+
+
+_FILE_SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,10}$")
+
+
+def source_filename(url: Optional[str]) -> Optional[str]:
+    """Upstream file name: the basename of a URL's path, if it looks like a file
+    (has a suffix such as ``.tif`` or ``.zip``), else None."""
+    if not url or "://" not in url:
+        return None
+    path = urlsplit(url).path
+    if path.endswith("/"):
+        return None
+    name = unquote(posixpath.basename(path))
+    return name if name and _FILE_SUFFIX.search(name) else None
 
 
 def private_base(base: str) -> str:

@@ -238,7 +238,8 @@ A version is eligible when all of these are true:
   period for versions superseded before any release pinned them.
 
 The report gives file count and bytes per version, so you can see how much tape
-is needed. To retire, after each release:
+is needed. Versions already retired are listed with their retirement date
+(`retired` column) and are never eligible. To retire, after each release:
 
 1. Run the report and review the eligible versions. Search consumer
    repositories' lock files for each version string. A version still locked
@@ -247,27 +248,38 @@ is needed. To retire, after each release:
 2. Copy `{dataset}/{version}/` (data and item JSON) from the Oxford drive to
    tape. Write a `SHA256SUMS` file next to it, and check that a test restore
    of one file matches.
-3. Remove the **data files** of that version from source.coop
+3. Mark the version as retired in the local catalogue:
+
+   ```bash
+   irv-datapkg retire {catalogue_base} --mark aqueduct_flood=v2-r1 \
+       --note "On Oxford tape; ask the irv-datapkg maintainers to restore" \
+       --location "tape LTO-0042"
+   ```
+
+   or `CatalogWriter(base).retire(dataset, version, note, location=...)`. This
+   adds `{version: {"date", "note", "location"}}` to the collection's
+   `irv:retired` (catalogue spec section 7). It refuses the latest version and
+   a version pinned by the most recent release.
+4. Publish (section 3). Only `collection.json` changes. From then on, clients
+   refuse to fetch the version with an error that gives the date and note;
+   `irv-datapkg release` refuses to pin it; consumers'
+   `irv-datapkg lock --check` reports their lock as stale.
+5. Remove the **data files** of that version from source.coop
    (`aws s3 rm s3://nismod/irv-datapkg/{dataset}/{version}/ --recursive
    --exclude "*.json" --endpoint-url https://data.source.coop`) and from the
    Oxford drive catalogue. Keep the item JSON and the collection's
    `irv:versions` entry, so citations and old release manifests still resolve
-   to metadata.
-4. Add a line to the retirement log, giving dataset, version, date and tape
-   location.
-5. To restore on request, copy the files back to the same paths. The
-   content is identical, so `publish` accepts it.
+   to metadata. `validate` does not report missing files of retired versions.
+6. Add a line to the retirement log (`reports/`), giving dataset, version,
+   date and tape location.
+7. To restore on request, copy the files back to the same paths, run
+   `CatalogWriter(base).unretire(dataset, version)` and publish. The content
+   is identical, so `publish` accepts it.
 
-`publish` never deletes, and it only uploads files that exist locally. Once a
-version's data files have been removed locally they are not re-uploaded.
-
-**Open issue:** the catalogue spec does not yet have a way to mark a version
-as retired. Until it does, `validate` reports the missing asset files of
-retired versions, and the client gives a plain 404. This must be fixed
-before the first retirement, which can happen in mid-2027 at the earliest.
-Proposal: a mutable `irv:retired` map in `collection.json`,
-`{version: {"date": ..., "restore": "contact ..."}}`, which `validate` and the
-client honour.
+`publish` never deletes, and it only uploads files that exist locally. It also
+does not re-upload data files of a retired version that are missing on the
+remote (reported as `retired` in the summary), so step 5 can be done in
+either order on the two copies.
 
 ## 7. Monthly link check
 

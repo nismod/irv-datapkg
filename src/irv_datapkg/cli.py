@@ -8,7 +8,14 @@ from pathlib import Path
 import click
 import yaml
 
-from .catalog import Catalog, CatalogWriter, extract as extract_asset, check, validate_catalog
+from .catalog import (
+    Catalog,
+    CatalogError,
+    CatalogWriter,
+    extract as extract_asset,
+    check,
+    validate_catalog,
+)
 
 
 def _parse_props(values):
@@ -33,7 +40,7 @@ def catalog_options(f):
         "lock_file",
         type=click.Path(exists=True),
         default=None,
-        help="Use base, release and checksums from a datapkg.lock.yaml.",
+        help="Use base, release and checksums from a lock file (--base overrides its base).",
     )(f)
     f = click.option(
         "--release", "-r", default=None, help="Release, e.g. 2026.1 (default: latest versions)."
@@ -49,7 +56,7 @@ def _open(base, release, lock_file, private_base, cache_dir):
     if private_base:
         kwargs["private_base"] = private_base
     if lock_file:
-        return Catalog.from_lock(lock_file, **kwargs)
+        return Catalog.from_lock(lock_file, base=base, **kwargs)
     if not base:
         raise click.UsageError("give --base (or IRV_DATAPKG_BASE) or --lock")
     return Catalog.open(base, release=release, **kwargs)
@@ -80,15 +87,84 @@ def main():
 @click.option(
     "--dest", "-o", type=click.Path(file_okay=False), default=".", help="Output directory."
 )
+@click.option(
+    "--link",
+    type=click.Choice(["copy", "hardlink", "symlink"]),
+    default="copy",
+    show_default=True,
+    help="How to place cached files in DEST.",
+)
+@click.option("--no-cache", is_flag=True, help="Stream straight to DEST, bypassing the cache.")
 def fetch(
-    dataset, item_ids, base, release, lock_file, private_base, cache_dir, version, props, dest
+    dataset,
+    item_ids,
+    base,
+    release,
+    lock_file,
+    private_base,
+    cache_dir,
+    version,
+    props,
+    dest,
+    link,
+    no_cache,
 ):
-    """Download DATASET items (verified by sha256) into DEST."""
-    cat = _open(base, release, lock_file, private_base, cache_dir)
+    """Download DATASET items (verified by sha256) into DEST.
+
+    With --lock, files are fetched from the lock file's hrefs and checksums
+    alone (no catalogue reads) when the lock records what is needed; --base
+    then overrides the recorded base, e.g. for a mirror.
+    """
     Path(dest).mkdir(parents=True, exist_ok=True)
-    for item in _select(cat, dataset, version, props, item_ids):
-        for asset in item.assets.values():
-            click.echo(cat.fetch(asset, dest))
+    try:
+        if lock_file and version is None:
+            kwargs = {"cache_dir": cache_dir}
+            if private_base:
+                kwargs["private_base"] = private_base
+            cat = Catalog.from_lock(lock_file, base=base, **kwargs)
+            try:
+                ids = cat.lockfile.select(dataset, item_ids, **_parse_props(props))
+            except CatalogError:
+                ids = None  # e.g. an old lock without properties: read the catalogue
+            if ids is not None:
+                if not ids:
+                    raise click.ClickException(f"No matching locked items in {dataset}")
+                for item_id in ids:
+                    for key in cat.lockfile.datasets[dataset]["items"][item_id]:
+                        click.echo(
+                            cat.fetch_locked(
+                                dataset, item_id, dest, key=key, link=link, cache=not no_cache
+                            )
+                        )
+                return
+        else:
+            cat = _open(base, release, lock_file, private_base, cache_dir)
+        for item in _select(cat, dataset, version, props, item_ids):
+            for asset in item.assets.values():
+                click.echo(cat.fetch(asset, dest, link=link, cache=not no_cache))
+    except CatalogError as e:
+        raise click.ClickException(str(e))
+
+
+def _parse_selection(items, props):
+    """{dataset: [item ids..., {filters}]} from --item DATASET/ID and
+    --property DATASET:KEY=VALUE options."""
+    select = {}
+    for spec in items:
+        if "/" not in spec:
+            raise click.BadParameter(f"expected DATASET/ITEM_ID, got {spec!r}")
+        dataset, item_id = spec.split("/", 1)
+        select.setdefault(dataset, []).append(item_id)
+    filters = {}
+    for spec in props:
+        if ":" not in spec.split("=", 1)[0]:
+            raise click.BadParameter(f"expected DATASET:KEY=VALUE, got {spec!r}")
+        dataset, rest = spec.split(":", 1)
+        for key, values in _parse_props([rest]).items():
+            filters.setdefault(dataset, {}).setdefault(key, []).extend(values)
+    for dataset, f in filters.items():
+        select.setdefault(dataset, []).append(f)
+    return select
 
 
 @main.command()
@@ -97,11 +173,37 @@ def fetch(
 @click.option("--release", "-r", required=True, help="Release to lock to, e.g. 2026.1.")
 @click.option("--private-base", default=None, help="Override {BASE}-private.")
 @click.option("--output", "-o", default="datapkg.lock.yaml", show_default=True)
-def lock(datasets, base, release, private_base, output):
-    """Write a lock file pinning DATASETS (default: all) of a release."""
+@click.option(
+    "--item", "items", multiple=True, help="Lock only this item, DATASET/ITEM_ID (repeatable)."
+)
+@click.option(
+    "--property",
+    "-p",
+    "props",
+    multiple=True,
+    help="Lock only items matching DATASET:KEY=VALUE (repeatable; ANDed per dataset).",
+)
+@click.option(
+    "--record-base", default=None, help="Base to record in the lock (default: --base as given)."
+)
+@click.option("--check", is_flag=True, help="Write nothing; exit 1 if OUTPUT is missing or stale.")
+def lock(datasets, base, release, private_base, output, items, props, record_base, check):
+    """Write a lock file pinning DATASETS (default: all, or those selected) of a release."""
     kwargs = {"private_base": private_base} if private_base else {}
-    cat = Catalog.open(base, release=release, **kwargs)
-    click.echo(cat.write_lock(output, list(datasets) or None))
+    select = _parse_selection(items, props)
+    try:
+        cat = Catalog.open(base, release=release, **kwargs)
+        if check:
+            diff = cat.lock_matches(output, datasets=list(datasets) or None, select=select)
+            click.echo(f"{output}: {diff}")
+            if not diff:
+                sys.exit(1)
+            return
+        click.echo(
+            cat.write_lock(output, list(datasets) or None, select=select or None, base=record_base)
+        )
+    except CatalogError as e:
+        raise click.ClickException(str(e))
 
 
 @main.command()
@@ -287,11 +389,32 @@ def publish(
 @click.option("--now", default=None, help="Evaluate as of this date (YYYY-MM-DD).")
 @click.option("--output", "-o", default=None, type=click.Path(), help="Write the report as CSV.")
 @click.option("--all", "show_all", is_flag=True, help="Print every version, not just eligible.")
-def retire(base, private_base, keep_days, now, output, show_all):
-    """Report dataset versions eligible to move to cold (tape) storage."""
+@click.option(
+    "--mark",
+    multiple=True,
+    help="Mark DATASET=VERSION as retired in collection.json instead of reporting (repeatable).",
+)
+@click.option("--note", default=None, help="With --mark: where the files are, how to restore.")
+@click.option("--location", default=None, help="With --mark: tape location.")
+def retire(base, private_base, keep_days, now, output, show_all, mark, note, location):
+    """Report dataset versions eligible to move to cold (tape) storage, or
+    --mark versions as retired once their files are on tape."""
     import datetime as dt
 
     from .publish import RETIRE_FIELDS, retire_report, write_csv
+
+    if mark:
+        if not note:
+            raise click.UsageError("--mark needs --note")
+        writer = CatalogWriter(base, private_base=private_base)
+        for dataset, versions in _parse_props(mark).items():
+            for version in versions:
+                try:
+                    writer.retire(dataset, version, note, date=now, location=location)
+                except (ValueError, FileNotFoundError) as e:
+                    raise click.ClickException(str(e))
+                click.echo(f"retired {dataset} {version}")
+        return
 
     rows = retire_report(
         base,

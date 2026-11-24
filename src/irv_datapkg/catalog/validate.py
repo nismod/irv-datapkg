@@ -39,7 +39,8 @@ def validate_catalog(
 ) -> list:
     """Walk ``{BASE}`` (and ``{BASE}-private`` if present) and return a list of
     problems; empty means valid. ``check_files`` also verifies sha256 of every
-    asset (reads all data)."""
+    asset (reads all data). Files of versions listed in a collection's
+    ``irv:retired`` may be missing."""
     so = storage_options or {}
     base = _fs.normalise(base)
     roots = {
@@ -75,6 +76,9 @@ def validate_catalog(
                     f"irv:access is {coll.get('irv:access')!r} but it lives under the {access} root",
                 )
             collections[coll.get("id")] = coll
+            for version in coll.get("irv:retired") or {}:
+                if version not in coll.get("irv:versions", []):
+                    err(coll_url, f"irv:retired lists {version}, which is not in irv:versions")
             for ilink in coll.get("links", []):
                 if ilink["rel"] == "item":
                     _validate_item(
@@ -124,10 +128,12 @@ def _validate_item(coll, item_url, check_files, so, err, errors):
     for dim in coll.get("irv:dimensions", []):
         if dim not in props:
             err(item_url, f"missing dimension property {dim!r}")
+    retired = version in (coll.get("irv:retired") or {})
     for key, asset in item.get("assets", {}).items():
         href = _fs.resolve(asset.get("href", ""), item_url)
         if not _fs.exists(href, so):
-            err(href, f"asset {key} file missing")
+            if not retired:  # retired versions' files are in cold storage
+                err(href, f"asset {key} file missing")
             continue
         fs, path = _fs.fs_for(href, so)
         if fs.size(path) != asset.get("file:size"):
